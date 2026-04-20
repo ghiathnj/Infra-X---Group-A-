@@ -9,7 +9,6 @@ services:
       - "3306:3306"
     volumes:
       - mariadb_data:/var/lib/mysql
-      - ./db-init:/docker-entrypoint-initdb.d:ro
     healthcheck:
       test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
       interval: 10s
@@ -29,18 +28,6 @@ services:
       mariadb:
         condition: service_healthy
 
-  form-submission:
-    build: ./form-submission
-    restart: unless-stopped
-    ports:
-      - "8081:8080"
-    environment:
-      DB_URL: jdbc:mariadb://mariadb:3306/form_db
-      DB_USERNAME: root
-      DB_PASSWORD: root
-    depends_on:
-      mariadb:
-        condition: service_healthy
-
 volumes:
   mariadb_data:
+
