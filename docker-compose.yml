@@ -28,6 +28,14 @@ services:
       mariadb:
         condition: service_healthy
 
+  login-frontend:
+    build: ./login-frontend
+    restart: unless-stopped
+    ports:
+      - "3000:80"
+    depends_on:
+      - auth-service
+
 volumes:
   mariadb_data:
 

@@ -1,0 +1,27 @@
+<main class="dashboard-container">
+    <header class="dashboard-header">
+        <div class="brand">
+            <div class="logo" aria-hidden="true">+</div>
+            <h1>Doctor Dashboard</h1>
+        </div>
+        <button type="button" class="btn-secondary" (click)="logout()">Log out</button>
+    </header>
+
+    <section class="dashboard-content">
+        <div class="welcome-card">
+            <h2>Welcome, {{ username() }}.</h2>
+            <p class="subtitle">You are signed in to the admin area.</p>
+
+            <dl class="session-info">
+                <dt>User</dt>
+                <dd>{{ username() }}</dd>
+                <dt>Roles</dt>
+                <dd>{{ roles() }}</dd>
+                <dt>Session expires</dt>
+                <dd>{{ expiresAt() }}</dd>
+            </dl>
+
+            <p class="subtitle">Patient submissions management will appear here.</p>
+        </div>
+    </section>
+</main>
