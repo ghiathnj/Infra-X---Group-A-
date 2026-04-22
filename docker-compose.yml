@@ -29,7 +29,7 @@ services:
         condition: service_healthy
 
   login-frontend:
-    build: ./login-frontend
+    build: frontend
     restart: unless-stopped
     ports:
       - "3000:80"
