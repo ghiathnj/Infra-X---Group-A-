@@ -1,93 +1,191 @@
-# Team A
+# Infra-X · Team A
 
+> A containerised, microservices-based web platform that lets patients submit a structured intake form online and lets doctors triage, review, and annotate those submissions from a role-based admin dashboard.
 
+This repository is the Team A stream of the **Infra-X** multi-team engineering programme — a hands-on, full-stack exercise that mirrors how a small product team actually ships: working on separate feature branches, opening merge requests, reviewing each other's code, and integrating behind a shared Docker Compose environment.
 
-## Getting started
+---
 
-To make it easy for you to get started with GitLab, here's a list of recommended next steps.
+## Highlights
 
-Already a pro? Just edit this README.md and make it your own. Want to make it easy? [Use the template at the bottom](#editing-this-readme)!
+- **Clean microservices split** — each service owns its own database, exposes a small HTTP contract, and is independently buildable and deployable.
+- **JWT-based security with shared signing key** — one service issues tokens, another consumes them, with a Base64-decoded HMAC-SHA256 key so tokens mint on `auth-service` validate on `clinical-service` without coupling.
+- **CORS wired end-to-end** — the Angular SPA on port `3000` talks to two different backends on `8080` and `8081` without browser pain; every OPTIONS preflight is handled server-side.
+- **Validation enforced on both sides of the wire** — the frontend uses Angular reactive forms with the same regex/email/required rules that the backend re-asserts via Jakarta Bean Validation, so bad input is caught early and never reaches the database.
+- **Role-aware UI** — a public landing page routes patients to an unauthenticated intake form and doctors to a JWT-protected dashboard with urgency-sorted triage.
+- **Production-minded containerisation** — multi-stage Dockerfiles, Alpine/`-jre` runtime images, nginx-served SPA with single-page-app fallback and long-cache static asset headers.
 
-## Add your files
+---
 
-* [Create](https://docs.gitlab.com/user/project/repository/web_editor/#create-a-file) or [upload](https://docs.gitlab.com/user/project/repository/web_editor/#upload-a-file) files
-* [Add files using the command line](https://docs.gitlab.com/topics/git/add_files/#add-files-to-a-git-repository) or push an existing Git repository with the following command:
+## Tech Stack
+
+| Layer          | Technology                                                               |
+| -------------- | ------------------------------------------------------------------------ |
+| Backend        | Java 17 · Spring Boot 4.0.5 · Spring Security · Spring Data JPA · Hibernate · JJWT 0.12.6 · Jakarta Bean Validation · Lombok |
+| Frontend       | Angular 17 (standalone components · signals · `@for`/`@if` control flow · reactive forms) · TypeScript 5.4 · RxJS            |
+| Database       | MariaDB 11 (one database instance per service)                            |
+| Build / Infra  | Maven · Node 20 · Docker · Docker Compose · nginx 1.27-alpine             |
+| Test tooling   | JUnit 5 · Spring Boot Test · Postman collection (Git-synced under `postman/`) |
+
+---
+
+## Architecture
 
 ```
-cd existing_repo
-git remote add origin https://gitlab.com/infra-x-group/team-a.git
-git branch -M main
-git push -uf origin main
+                        ┌────────────────────────┐
+                        │   Angular SPA (nginx)  │
+                        │    localhost:3000      │
+                        │                        │
+                        │  /               ──── landing page
+                        │  /patient-form   ──── public intake form
+                        │  /login          ──── doctor sign-in
+                        │  /dashboard      ──── triage + modal
+                        └──┬──────────────────┬──┘
+                           │ POST login       │ GET /api/clinical/forms
+                           │                  │ GET /api/clinical/forms/{id}
+                           │ JWT              │ PATCH /api/clinical/forms/{id}/admin
+                           │                  │ POST  /api/clinical/forms  (public)
+                           ▼                  ▼
+              ┌──────────────────────┐  ┌──────────────────────┐
+              │     auth-service     │  │   clinical-service   │
+              │   Spring Boot :8080  │  │   Spring Boot :8081  │
+              │                      │  │                      │
+              │  POST /api/auth/login│  │  REST + Bean         │
+              │  BCrypt + JWT (HS256)│  │  Validation + JWT    │
+              │  Role-based access   │  │  filter (same key)   │
+              └──────────┬───────────┘  └──────────┬───────────┘
+                         │                         │
+                         ▼                         ▼
+                  ┌─────────────┐          ┌─────────────┐
+                  │ mariadb-auth│          │mariadb-clinic│
+                  │   auth_db   │          │  clinicdb   │
+                  └─────────────┘          └─────────────┘
 ```
 
-## Integrate with your tools
+Each service is isolated — the only shared contract is the JWT secret and the role claim convention (`ROLE_ADMIN` / `ROLE_DOCTOR`).
 
-* [Set up project integrations](https://gitlab.com/infra-x-group/team-a/-/settings/integrations)
+---
 
-## Collaborate with your team
+## Services
 
-* [Invite team members and collaborators](https://docs.gitlab.com/user/project/members/)
-* [Create a new merge request](https://docs.gitlab.com/user/project/merge_requests/creating_merge_requests/)
-* [Automatically close issues from merge requests](https://docs.gitlab.com/user/project/issues/managing_issues/#closing-issues-automatically)
-* [Enable merge request approvals](https://docs.gitlab.com/user/project/merge_requests/approvals/)
-* [Set auto-merge](https://docs.gitlab.com/user/project/merge_requests/auto_merge/)
+### `auth-service` (:8080)
 
-## Test and Deploy
+The authentication and identity microservice.
 
-Use the built-in continuous integration in GitLab.
+- `POST /api/auth/login` — username + password, returns a signed JWT containing the subject and roles claim (`ROLE_ADMIN`).
+- BCrypt password hashing, stateless session policy, CSRF disabled (appropriate for stateless JWT), JWT filter registered before the standard username/password filter.
+- Seeds a default admin user on first boot via a `CommandLineRunner` so the full stack is demo-ready after a single `docker compose up`.
+- CORS allows the Angular origin.
 
-* [Get started with GitLab CI/CD](https://docs.gitlab.com/ci/quick_start/)
-* [Analyze your code for known vulnerabilities with Static Application Security Testing (SAST)](https://docs.gitlab.com/user/application_security/sast/)
-* [Deploy to Kubernetes, Amazon EC2, or Amazon ECS using Auto Deploy](https://docs.gitlab.com/topics/autodevops/requirements/)
-* [Use pull-based deployments for improved Kubernetes management](https://docs.gitlab.com/user/clusters/agent/)
-* [Set up protected environments](https://docs.gitlab.com/ci/environments/protected_environments/)
+### `clinical-service` (:8081)
 
-***
+The patient intake and triage microservice.
 
-# Editing this README
+- `POST /api/clinical/forms` — **public** endpoint for patients to submit an intake form. No authentication required (mirrors the way real clinics accept submissions from walk-ins).
+- `GET  /api/clinical/forms` — returns the list of all submissions. JWT-protected.
+- `GET  /api/clinical/forms/{id}` — single submission. JWT-protected.
+- `PATCH /api/clinical/forms/{id}/admin` — doctor sets `diagnosis` and `notes`. JWT-protected.
+- Validates inputs per the ticket's acceptance criteria: first name / last name / street / city must be uppercase; street number and postal code must be numeric; phone number must match an international format; email format when provided.
+- Shares the JWT signing secret with `auth-service` — tokens issued by one validate on the other without any cross-service call.
 
-When you're ready to make this README your own, just edit this file and use the handy template below (or feel free to structure it however you want - this is just a starting point!). Thanks to [makeareadme.com](https://www.makeareadme.com/) for this template.
+### `frontend` (Angular 17, served by nginx :3000)
 
-## Suggestions for a good README
+A single-page application covering the full doctor/patient UX.
 
-Every project is different, so consider which of these sections apply to yours. The sections used in the template are suggestions for most open source projects. Also keep in mind that while a README can be too long and detailed, too long is better than too short. If you think your README is too long, consider utilizing another form of documentation rather than cutting out information.
+- **`/`** — public landing page with a role picker ("I am a patient" / "I am a doctor").
+- **`/patient-form`** — public reactive form with client-side validation that mirrors the backend rules; sticky action bar keeps the *Submit* button visible regardless of form length; clears any stale doctor session on entry so shared clinic devices are safe.
+- **`/login`** — doctor sign-in with field-level validation, loading state, friendly error handling.
+- **`/dashboard`** — JWT-guarded triage view: submissions are sorted by an urgency score (symptom count), colour-coded red / yellow / green, and clickable to open a details modal where the doctor can record `diagnosis` and `notes`. Save hits the `PATCH /api/clinical/forms/{id}/admin` endpoint and updates the row in place without a full re-fetch.
+- Auth token is attached to outgoing requests by an `HttpInterceptor`; route guards enforce role-based access; `publicGuard` auto-redirects signed-in doctors away from the login page; `authGuard` enforces `ROLE_ADMIN`/`ROLE_DOCTOR` on the dashboard.
 
-## Name
-Choose a self-explaining name for your project.
+---
 
-## Description
-Let people know what your project can do specifically. Provide context and add a link to any reference visitors might be unfamiliar with. A list of Features or a Background subsection can also be added here. If there are alternatives to your project, this is a good place to list differentiating factors.
+## Quick start
 
-## Badges
-On some READMEs, you may see small images that convey metadata, such as whether or not all the tests are passing for the project. You can use Shields to add some to your README. Many services also have instructions for adding a badge.
+Prerequisites: **Docker** and **Docker Compose v2+** — nothing else. Java, Maven, Node, and the Angular CLI are only needed if you want to develop a service outside of containers.
 
-## Visuals
-Depending on what you are making, it can be a good idea to include screenshots or even a video (you'll frequently see GIFs rather than actual videos). Tools like ttygif can help, but check out Asciinema for a more sophisticated method.
+```bash
+git clone https://gitlab.com/infra-x-group/team-a.git
+cd team-a
+docker compose up --build
+```
 
-## Installation
-Within a particular ecosystem, there may be a common way of installing things, such as using Yarn, NuGet, or Homebrew. However, consider the possibility that whoever is reading your README is a novice and would like more guidance. Listing specific steps helps remove ambiguity and gets people to using your project as quickly as possible. If it only runs in a specific context like a particular programming language version or operating system or has dependencies that have to be installed manually, also add a Requirements subsection.
+Once everything is healthy:
 
-## Usage
-Use examples liberally, and show the expected output if you can. It's helpful to have inline the smallest example of usage that you can demonstrate, while providing links to more sophisticated examples if they are too long to reasonably include in the README.
+| URL                                             | What you'll see                             |
+| ----------------------------------------------- | ------------------------------------------- |
+| http://localhost:3000                           | Landing page — choose patient or doctor     |
+| http://localhost:3000/patient-form              | Public patient intake form                  |
+| http://localhost:3000/login                     | Doctor sign-in (`admin` / `admin`)          |
+| http://localhost:3000/dashboard                 | Triage dashboard (after login)              |
+| http://localhost:8080/api/auth/login            | Auth API                                    |
+| http://localhost:8081/api/clinical/forms        | Clinical API                                |
 
-## Support
-Tell people where they can go to for help. It can be any combination of an issue tracker, a chat room, an email address, etc.
+A ready-to-import **Postman collection** is under [`postman/collections/clinical-service.postman_collection.json`](postman/collections/clinical-service.postman_collection.json) with tests covering every endpoint, including CORS preflight and validation failures.
 
-## Roadmap
-If you have ideas for releases in the future, it is a good idea to list them in the README.
+---
 
-## Contributing
-State if you are open to contributions and what your requirements are for accepting them.
+## Project structure
 
-For people who want to make changes to your project, it's helpful to have some documentation on how to get started. Perhaps there is a script that they should run or some environment variables that they need to set. Make these steps explicit. These instructions could also be useful to your future self.
+```
+team-a/
+├── auth-service/              # Spring Boot · authentication + JWT
+│   ├── src/main/java/infrax/teama/auth_service/
+│   │   ├── controller/        # AuthController
+│   │   ├── dto/               # LoginRequest, LoginResponse
+│   │   ├── model/             # User, Role (JPA entities)
+│   │   ├── repository/        # Spring Data JPA
+│   │   ├── service/           # JwtService, CustomUserDetailsService
+│   │   └── config/            # SecurityConfig, CORS, DataInitializer
+│   └── Dockerfile             # Multi-stage: temurin-jdk → temurin-jre
+│
+├── clinical-service/          # Spring Boot · patient intake + triage
+│   ├── src/main/java/infrax/teama/clinical_service/
+│   │   ├── controller/        # PatientFormController
+│   │   ├── dto/               # PatientFormRequest (with @Pattern/@Email)
+│   │   ├── model/             # PatientForm + enum types (Symptom, Allergy, …)
+│   │   ├── repository/
+│   │   ├── service/
+│   │   └── security/          # JwtProvider, JwtAuthenticationFilter, CORS
+│   └── Dockerfile
+│
+├── frontend/                  # Angular 17 SPA
+│   └── src/app/
+│       ├── core/              # auth.service, auth.interceptor, route guards
+│       ├── pages/
+│       │   ├── landing/       # role picker (patient / doctor)
+│       │   ├── login/         # doctor sign-in
+│       │   ├── patient-form/  # public reactive-form intake
+│       │   └── dashboard/     # triage table + detail modal
+│       └── environments/
+│
+├── postman/                   # Git-synced API collection + env
+├── db-init/                   # MariaDB init scripts
+├── init-databases.sql         # creates auth_db + clinicdb
+└── docker-compose.yml         # 4 services + healthcheck + networks
+```
 
-You can also document commands to lint the code or run tests. These steps help to ensure high code quality and reduce the likelihood that the changes inadvertently break something. Having instructions for running tests is especially helpful if it requires external setup, such as starting a Selenium server for testing in a browser.
+---
 
-## Authors and acknowledgment
-Show your appreciation to those who have contributed to the project.
+## Engineering notes
 
-## License
-For open source projects, say how it is licensed.
+A few decisions worth calling out for a reviewer:
 
-## Project status
-If you have run out of energy or time for your project, put a note at the top of the README saying that development has slowed down or stopped completely. Someone may choose to fork your project or volunteer to step in as a maintainer or owner, allowing your project to keep going. You can also make an explicit request for maintainers.
+- **Authentication is centralised, authorisation is local.** Only `auth-service` knows how to mint tokens; every other service is stateless and just verifies the signature. Adding a third service in the future means copying ~40 lines of filter/provider code — no service discovery, no session store.
+- **One database per service**, co-located on MariaDB instances behind the same Docker network. Cheap isolation that still lets each service own its schema and evolve independently.
+- **Validation is duplicated on purpose.** The Angular form enforces the same rules as the backend DTO because (a) the frontend rejects bad input instantly for a crisp UX and (b) the backend re-validates because clients can't be trusted. Both sets of rules live right next to the data they describe.
+- **Shared-device safety.** Clinic front desks are often shared. The `patient-form` route actively clears any signed-in doctor session on load — a patient using the same machine can never navigate into the doctor's dashboard with a leftover token.
+- **Progressive enhancement of Hanin's original submit-service.** The clinical-service backend was rebased from a teammate's earlier work, renamed, and hardened (JWT key encoding, port conflict, URL-mapping cleanup, CORS). The git history preserves the original authorship.
+
+---
+
+## Status
+
+The architecture, services, and features documented above are fully implemented. Integration of the individual branches into `main` happens through peer-reviewed merge requests on GitLab; see the open MR list for what's currently in review. `main` always reflects the stable, merged baseline.
+
+---
+
+## Team A
+
+Infra-X Team A is a group of engineering programme participants collaborating on the project via GitLab merge requests and peer review. Individual contributions are visible in the commit history and MR thread of each feature branch.
+
