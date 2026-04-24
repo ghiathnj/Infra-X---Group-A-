@@ -121,3 +121,17 @@
 }
 
 .login-footer p { margin: 0; }
+
+.login-footer .patient-link {
+    margin-top: 10px;
+    padding-top: 10px;
+    border-top: 1px solid var(--color-border);
+}
+
+.login-footer .patient-link a {
+    color: var(--color-primary);
+    text-decoration: none;
+    font-weight: 500;
+}
+
+.login-footer .patient-link a:hover { text-decoration: underline; }

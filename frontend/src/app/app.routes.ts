@@ -16,5 +16,11 @@ export const routes: Routes = [
         loadComponent: () =>
             import('./pages/dashboard/dashboard.component').then((m) => m.DashboardComponent)
     },
+    {
+        // Public patient intake form — no guard, no auth required.
+        path: 'patient-form',
+        loadComponent: () =>
+            import('./pages/patient-form/patient-form.component').then((m) => m.PatientFormComponent)
+    },
     { path: '**', redirectTo: 'login' }
 ];
