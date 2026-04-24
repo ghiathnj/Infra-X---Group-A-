@@ -143,6 +143,14 @@
     justify-content: space-between;
     gap: 12px;
     margin-top: 24px;
+    padding: 16px 20px;
+    position: sticky;
+    bottom: 16px;
+    background: var(--color-card);
+    border: 1px solid var(--color-border);
+    border-radius: 10px;
+    box-shadow: 0 -6px 16px rgba(15, 23, 42, 0.08);
+    z-index: 10;
 }
 
 .btn-link {

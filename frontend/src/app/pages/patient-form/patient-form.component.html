@@ -176,8 +176,8 @@
                     <div class="form-error" role="alert" aria-live="polite">{{ msg }}</div>
                 }
 
-                <div class="actions">
-                    <a routerLink="/login" class="btn-link">Back to login</a>
+                <div class="actions" role="group" aria-label="Form actions">
+                    <a routerLink="/" class="btn-link">&larr; Back to main page</a>
                     <button type="submit" class="btn-primary"
                             [class.loading]="submitting()"
                             [disabled]="submitting()">

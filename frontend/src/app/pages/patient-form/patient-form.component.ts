@@ -1,4 +1,4 @@
-import { Component, inject, signal } from '@angular/core';
+import { Component, inject, OnInit, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import {
     FormArray,
@@ -18,6 +18,7 @@ import {
     Medication,
     PreExistingCondition
 } from '../../core/patient-form.service';
+import { AuthService } from '../../core/auth.service';
 
 interface OptionDef<T extends string> {
     value: T;
@@ -31,13 +32,25 @@ interface OptionDef<T extends string> {
     templateUrl: './patient-form.component.html',
     styleUrl: './patient-form.component.css'
 })
-export class PatientFormComponent {
+export class PatientFormComponent implements OnInit {
     private readonly fb = inject(FormBuilder);
     private readonly api = inject(PatientFormService);
+    private readonly auth = inject(AuthService);
 
     readonly submitting = signal(false);
     readonly submittedId = signal<number | null>(null);
     readonly errorMessage = signal<string | null>(null);
+
+    ngOnInit(): void {
+        // Shared-device safety: if a doctor was signed in on this device,
+        // the patient flow must be anonymous — otherwise someone could
+        // reach /dashboard via a stale token. Clear any existing session
+        // on entry to /patient-form so the patient is never carrying a
+        // doctor's credentials.
+        if (this.auth.hasValidSession()) {
+            this.auth.logout();
+        }
+    }
 
     // Backend-driven enum lists — labels are display-only; values must match the enum on the server.
     readonly symptomOptions: OptionDef<Symptom>[] = [
