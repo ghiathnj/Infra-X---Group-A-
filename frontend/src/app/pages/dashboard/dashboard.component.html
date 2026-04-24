@@ -8,20 +8,95 @@
     </header>
 
     <section class="dashboard-content">
-        <div class="welcome-card">
-            <h2>Welcome, {{ username() }}.</h2>
-            <p class="subtitle">You are signed in to the admin area.</p>
+        <div class="welcome-card compact">
+            <div class="welcome-row">
+                <div>
+                    <h2>Welcome, {{ username() }}.</h2>
+                    <p class="subtitle">Signed in as {{ roles() }} · session expires {{ expiresAt() }}</p>
+                </div>
+                <button type="button" class="btn-refresh" (click)="loadSubmissions()"
+                        [disabled]="loading()" aria-label="Refresh submissions">
+                    {{ loading() ? 'Loading…' : 'Refresh' }}
+                </button>
+            </div>
+        </div>
 
-            <dl class="session-info">
-                <dt>User</dt>
-                <dd>{{ username() }}</dd>
-                <dt>Roles</dt>
-                <dd>{{ roles() }}</dd>
-                <dt>Session expires</dt>
-                <dd>{{ expiresAt() }}</dd>
-            </dl>
+        <div class="submissions-card">
+            <header class="submissions-header">
+                <h2>Patient submissions</h2>
+                <span class="count-badge">{{ sorted().length }}</span>
+            </header>
 
-            <p class="subtitle">Patient submissions management will appear here.</p>
+            @if (error(); as msg) {
+                <div class="form-error" role="alert" aria-live="polite">{{ msg }}</div>
+            }
+
+            @if (loading() && sorted().length === 0) {
+                <div class="empty-state">Loading submissions…</div>
+            } @else if (!loading() && sorted().length === 0 && !error()) {
+                <div class="empty-state">
+                    <p>No patient submissions yet.</p>
+                    <p class="subtitle">They will appear here when patients fill out the intake form.</p>
+                </div>
+            } @else if (sorted().length > 0) {
+                <p class="legend">
+                    Sorted by urgency (number of reported symptoms).
+                    <span class="legend-dot urgency-red"></span> High
+                    <span class="legend-dot urgency-yellow"></span> Medium
+                    <span class="legend-dot urgency-green"></span> Low
+                </p>
+
+                <div class="table-wrapper">
+                    <table class="submissions-table">
+                        <thead>
+                            <tr>
+                                <th scope="col">Urgency</th>
+                                <th scope="col">ID</th>
+                                <th scope="col">Name</th>
+                                <th scope="col">DOB</th>
+                                <th scope="col">Phone</th>
+                                <th scope="col">Email</th>
+                                <th scope="col">Diagnosed?</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @for (s of sorted(); track s.id) {
+                                <tr class="row-click" (click)="openDetail(s)"
+                                    (keydown.enter)="openDetail(s)" tabindex="0"
+                                    [attr.aria-label]="'Open submission ' + s.id">
+                                    <td>
+                                        <span class="urgency-badge"
+                                              [class]="'urgency-' + urgencyLevel(s)"
+                                              [title]="urgencyScore(s) + ' symptom(s)'">
+                                            <span class="dot" aria-hidden="true"></span>
+                                            {{ urgencyLabel(urgencyLevel(s)) }}
+                                        </span>
+                                    </td>
+                                    <td class="mono">#{{ s.id }}</td>
+                                    <td>{{ s.firstName }} {{ s.lastName }}</td>
+                                    <td>{{ s.dateOfBirth }}</td>
+                                    <td>{{ s.phoneNumber }}</td>
+                                    <td>{{ s.emailAddress || '—' }}</td>
+                                    <td>
+                                        @if (hasDiagnosis(s)) {
+                                            <span class="diag-yes" aria-label="Diagnosed">✓</span>
+                                        } @else {
+                                            <span class="diag-no" aria-label="Not diagnosed">—</span>
+                                        }
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
         </div>
     </section>
+
+    @if (selected(); as s) {
+        <app-submission-detail-modal
+            [submission]="s"
+            (closed)="closeDetail()"
+            (saved)="onSaved($event)" />
+    }
 </main>

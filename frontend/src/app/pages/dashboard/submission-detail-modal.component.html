@@ -1,0 +1,124 @@
+<div class="modal-overlay" (click)="onOverlayClick($event)" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+    <div class="modal-card">
+        <header class="modal-header">
+            <div>
+                <h2 id="modal-title">Patient submission #{{ submission().id }}</h2>
+                <p class="subtitle">{{ submission().firstName }} {{ submission().lastName }}</p>
+            </div>
+            <button type="button" class="btn-icon" (click)="closed.emit()" [disabled]="saving()" aria-label="Close">&times;</button>
+        </header>
+
+        <div class="modal-body">
+            <section class="section">
+                <h3>Personal information</h3>
+                <dl class="info-grid">
+                    <dt>Date of birth</dt><dd>{{ submission().dateOfBirth }}</dd>
+                    <dt>Phone</dt><dd>{{ submission().phoneNumber }}</dd>
+                    <dt>Email</dt><dd>{{ submission().emailAddress || '—' }}</dd>
+                    <dt>Address</dt>
+                    <dd>
+                        {{ submission().streetName }} {{ submission().streetNumber }},
+                        {{ submission().postalCode }} {{ submission().city }}
+                    </dd>
+                </dl>
+            </section>
+
+            <section class="section">
+                <h3>Symptoms</h3>
+                @if ((submission().symptoms?.length ?? 0) === 0 && !submission().otherSymptoms) {
+                    <p class="empty">No symptoms reported.</p>
+                } @else {
+                    <ul class="chips">
+                        @for (s of submission().symptoms ?? []; track s) {
+                            <li class="chip">{{ s }}</li>
+                        }
+                    </ul>
+                    @if (submission().otherSymptoms) {
+                        <p class="other"><strong>Other:</strong> {{ submission().otherSymptoms }}</p>
+                    }
+                }
+            </section>
+
+            <section class="section">
+                <h3>Allergies</h3>
+                @if ((submission().allergies?.length ?? 0) === 0 && !submission().otherAllergies) {
+                    <p class="empty">None reported.</p>
+                } @else {
+                    <ul class="chips">
+                        @for (a of submission().allergies ?? []; track a) {
+                            <li class="chip">{{ a }}</li>
+                        }
+                    </ul>
+                    @if (submission().otherAllergies) {
+                        <p class="other"><strong>Other:</strong> {{ submission().otherAllergies }}</p>
+                    }
+                }
+            </section>
+
+            <section class="section">
+                <h3>Medications</h3>
+                @if ((submission().medications?.length ?? 0) === 0 && !submission().otherMedications) {
+                    <p class="empty">None reported.</p>
+                } @else {
+                    <ul class="chips">
+                        @for (m of submission().medications ?? []; track m) {
+                            <li class="chip">{{ m }}</li>
+                        }
+                    </ul>
+                    @if (submission().otherMedications) {
+                        <p class="other"><strong>Other:</strong> {{ submission().otherMedications }}</p>
+                    }
+                }
+            </section>
+
+            <section class="section">
+                <h3>Pre-existing conditions</h3>
+                @if ((submission().preExistingConditions?.length ?? 0) === 0 && !submission().otherPreExistingConditions) {
+                    <p class="empty">None reported.</p>
+                } @else {
+                    <ul class="chips">
+                        @for (c of submission().preExistingConditions ?? []; track c) {
+                            <li class="chip">{{ c }}</li>
+                        }
+                    </ul>
+                    @if (submission().otherPreExistingConditions) {
+                        <p class="other"><strong>Other:</strong> {{ submission().otherPreExistingConditions }}</p>
+                    }
+                }
+            </section>
+
+            <section class="section editable">
+                <h3>Doctor's assessment</h3>
+                <div class="field">
+                    <label for="diagnosis">Diagnosis</label>
+                    <textarea id="diagnosis" rows="3" [ngModel]="diagnosis()"
+                              (ngModelChange)="diagnosis.set($event)"
+                              [disabled]="saving()"
+                              placeholder="Enter your diagnosis"></textarea>
+                </div>
+                <div class="field">
+                    <label for="notes">Notes</label>
+                    <textarea id="notes" rows="4" [ngModel]="notes()"
+                              (ngModelChange)="notes.set($event)"
+                              [disabled]="saving()"
+                              placeholder="Internal notes, follow-up instructions, etc."></textarea>
+                </div>
+
+                @if (error(); as msg) {
+                    <div class="form-error" role="alert" aria-live="polite">{{ msg }}</div>
+                }
+            </section>
+        </div>
+
+        <footer class="modal-footer">
+            <button type="button" class="btn-secondary" (click)="closed.emit()" [disabled]="saving()">
+                Cancel
+            </button>
+            <button type="button" class="btn-primary" (click)="save()"
+                    [class.loading]="saving()" [disabled]="saving()">
+                <span class="btn-label">{{ saving() ? 'Saving…' : 'Save diagnosis' }}</span>
+                @if (saving()) { <span class="spinner" aria-hidden="true"></span> }
+            </button>
+        </footer>
+    </div>
+</div>
