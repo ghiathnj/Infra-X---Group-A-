@@ -100,9 +100,9 @@
                 </fieldset>
 
                 <!-- Symptoms -->
-                <fieldset class="section" formArrayName="symptoms">
+                <fieldset class="section">
                     <legend>Symptoms <span class="muted">(optional — select any that apply)</span></legend>
-                    <div class="checkbox-grid">
+                    <div class="checkbox-grid" formArrayName="symptoms">
                         @for (opt of symptomOptions; track opt.value; let i = $index) {
                             <label class="checkbox">
                                 <input type="checkbox" [formControlName]="i" />
@@ -118,9 +118,9 @@
                 </fieldset>
 
                 <!-- Allergies -->
-                <fieldset class="section" formArrayName="allergies">
+                <fieldset class="section">
                     <legend>Allergies <span class="muted">(optional)</span></legend>
-                    <div class="checkbox-grid">
+                    <div class="checkbox-grid" formArrayName="allergies">
                         @for (opt of allergyOptions; track opt.value; let i = $index) {
                             <label class="checkbox">
                                 <input type="checkbox" [formControlName]="i" />
@@ -136,9 +136,9 @@
                 </fieldset>
 
                 <!-- Medications -->
-                <fieldset class="section" formArrayName="medications">
+                <fieldset class="section">
                     <legend>Medications <span class="muted">(optional)</span></legend>
-                    <div class="checkbox-grid">
+                    <div class="checkbox-grid" formArrayName="medications">
                         @for (opt of medicationOptions; track opt.value; let i = $index) {
                             <label class="checkbox">
                                 <input type="checkbox" [formControlName]="i" />
@@ -154,9 +154,9 @@
                 </fieldset>
 
                 <!-- Pre-existing conditions -->
-                <fieldset class="section" formArrayName="preExistingConditions">
+                <fieldset class="section">
                     <legend>Pre-existing conditions <span class="muted">(optional)</span></legend>
-                    <div class="checkbox-grid">
+                    <div class="checkbox-grid" formArrayName="preExistingConditions">
                         @for (opt of conditionOptions; track opt.value; let i = $index) {
                             <label class="checkbox">
                                 <input type="checkbox" [formControlName]="i" />
