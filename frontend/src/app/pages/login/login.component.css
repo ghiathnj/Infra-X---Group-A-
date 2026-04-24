@@ -122,16 +122,15 @@
 
 .login-footer p { margin: 0; }
 
-.login-footer .patient-link {
+.login-footer .back-link {
     margin-top: 10px;
     padding-top: 10px;
     border-top: 1px solid var(--color-border);
 }
 
-.login-footer .patient-link a {
-    color: var(--color-primary);
+.login-footer .back-link a {
+    color: var(--color-muted);
     text-decoration: none;
-    font-weight: 500;
 }
 
-.login-footer .patient-link a:hover { text-decoration: underline; }
+.login-footer .back-link a:hover { color: var(--color-text); text-decoration: underline; }

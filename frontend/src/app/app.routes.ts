@@ -3,7 +3,13 @@ import { authGuard } from './core/auth.guard';
 import { publicGuard } from './core/public.guard';
 
 export const routes: Routes = [
-    { path: '', pathMatch: 'full', redirectTo: 'login' },
+    {
+        // Public landing page: choose between patient intake and doctor login.
+        path: '',
+        pathMatch: 'full',
+        loadComponent: () =>
+            import('./pages/landing/landing.component').then((m) => m.LandingComponent)
+    },
     {
         path: 'login',
         canActivate: [publicGuard],
@@ -22,5 +28,5 @@ export const routes: Routes = [
         loadComponent: () =>
             import('./pages/patient-form/patient-form.component').then((m) => m.PatientFormComponent)
     },
-    { path: '**', redirectTo: 'login' }
+    { path: '**', redirectTo: '' }
 ];
