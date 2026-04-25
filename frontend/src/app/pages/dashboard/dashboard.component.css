@@ -229,6 +229,12 @@
 .diag-yes { color: #16a34a; font-weight: 700; }
 .diag-no { color: var(--color-muted); }
 
+.submitted-at {
+    white-space: nowrap;
+    color: var(--color-muted);
+    font-variant-numeric: tabular-nums;
+}
+
 @media (max-width: 720px) {
     .welcome-row { flex-direction: column; align-items: stretch; }
     .submissions-card { padding: 16px; }

@@ -57,6 +57,7 @@
                                 <th scope="col">Phone</th>
                                 <th scope="col">Email</th>
                                 <th scope="col">Diagnosed?</th>
+                                <th scope="col">Submitted</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -84,6 +85,7 @@
                                             <span class="diag-no" aria-label="Not diagnosed">—</span>
                                         }
                                     </td>
+                                    <td class="submitted-at">{{ formatSubmittedAt(s) }}</td>
                                 </tr>
                             }
                         </tbody>

@@ -86,6 +86,14 @@ export class DashboardComponent implements OnInit {
         return count + other;
     }
 
+    formatSubmittedAt(s: PatientFormResponse): string {
+        if (!s.submittedAt) return '—';
+        return new Date(s.submittedAt).toLocaleString('de-DE', {
+            day: '2-digit', month: '2-digit', year: 'numeric',
+            hour: '2-digit', minute: '2-digit'
+        });
+    }
+
     urgencyLevel(s: PatientFormResponse): UrgencyLevel {
         const score = this.urgencyScore(s);
         if (score >= URGENCY_RED_THRESHOLD) return 'red';

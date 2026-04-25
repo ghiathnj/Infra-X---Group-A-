@@ -41,6 +41,8 @@ export interface PatientFormResponse extends PatientFormRequest {
     id: number;
     diagnosis?: string | null;
     notes?: string | null;
+    /** ISO-8601 timestamp set by clinical-service on first persist. */
+    submittedAt?: string | null;
 }
 
 @Injectable({ providedIn: 'root' })

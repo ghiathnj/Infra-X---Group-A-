@@ -50,6 +50,14 @@ export class SubmissionDetailModalComponent {
         }
     }
 
+    formatSubmittedAt(s: PatientFormResponse): string {
+        if (!s.submittedAt) return '—';
+        return new Date(s.submittedAt).toLocaleString('de-DE', {
+            day: '2-digit', month: '2-digit', year: 'numeric',
+            hour: '2-digit', minute: '2-digit'
+        });
+    }
+
     save(): void {
         if (this.saving()) return;
         this.error.set(null);

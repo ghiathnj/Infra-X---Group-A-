@@ -20,6 +20,7 @@
                         {{ submission().streetName }} {{ submission().streetNumber }},
                         {{ submission().postalCode }} {{ submission().city }}
                     </dd>
+                    <dt>Submitted</dt><dd>{{ formatSubmittedAt(submission()) }}</dd>
                 </dl>
             </section>
 
