@@ -21,6 +21,23 @@
             </div>
         </div>
 
+        <nav class="tabs" role="tablist" aria-label="Dashboard sections">
+            <button type="button" role="tab"
+                    class="tab" [class.is-active]="activeTab() === 'submissions'"
+                    [attr.aria-selected]="activeTab() === 'submissions'"
+                    (click)="setTab('submissions')">
+                Submissions
+                <span class="tab-badge">{{ sorted().length }}</span>
+            </button>
+            <button type="button" role="tab"
+                    class="tab" [class.is-active]="activeTab() === 'statistics'"
+                    [attr.aria-selected]="activeTab() === 'statistics'"
+                    (click)="setTab('statistics')">
+                Statistics
+            </button>
+        </nav>
+
+        @if (activeTab() === 'submissions') {
         <div class="submissions-card">
             <header class="submissions-header">
                 <h2>Patient submissions</h2>
@@ -93,6 +110,11 @@
                 </div>
             }
         </div>
+        } @else {
+            <app-statistics-panel
+                [monthlyStats]="monthlyStats()"
+                [globalStats]="globalStats()" />
+        }
     </section>
 
     @if (selected(); as s) {

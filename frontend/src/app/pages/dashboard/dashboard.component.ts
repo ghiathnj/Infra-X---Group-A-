@@ -5,19 +5,34 @@ import { HttpErrorResponse } from '@angular/common/http';
 
 import { AuthService } from '../../core/auth.service';
 import { SubmissionsService } from '../../core/submissions.service';
-import { PatientFormResponse } from '../../core/patient-form.service';
+import {
+    Allergy,
+    Medication,
+    PatientFormResponse,
+    PreExistingCondition,
+    Symptom
+} from '../../core/patient-form.service';
 import { SubmissionDetailModalComponent } from './submission-detail-modal.component';
+import {
+    StatisticsPanelComponent,
+    MonthlyStat,
+    GlobalStat,
+    CountedItem
+} from './statistics-panel.component';
 
 type UrgencyLevel = 'red' | 'yellow' | 'green';
+type Tab = 'submissions' | 'statistics';
 
 // Tunable thresholds — see the urgencyLevel helper.
 const URGENCY_RED_THRESHOLD = 5;
 const URGENCY_YELLOW_THRESHOLD = 2;
 
+const MONTHS_WINDOW = 6;
+
 @Component({
     selector: 'app-dashboard',
     standalone: true,
-    imports: [CommonModule, SubmissionDetailModalComponent],
+    imports: [CommonModule, SubmissionDetailModalComponent, StatisticsPanelComponent],
     templateUrl: './dashboard.component.html',
     styleUrl: './dashboard.component.css'
 })
@@ -38,6 +53,8 @@ export class DashboardComponent implements OnInit {
     readonly error = signal<string | null>(null);
     readonly selected = signal<PatientFormResponse | null>(null);
 
+    readonly activeTab = signal<Tab>('submissions');
+
     // Triage-sorted view: red → yellow → green, newest id first for ties.
     readonly sorted = computed<PatientFormResponse[]>(() =>
         [...this.submissions()].sort((a, b) => {
@@ -45,6 +62,19 @@ export class DashboardComponent implements OnInit {
             return diff !== 0 ? diff : b.id - a.id;
         })
     );
+
+    // Statistics — recompute automatically whenever the submissions list changes.
+    readonly monthlyStats = computed<MonthlyStat[]>(() =>
+        this.groupByMonth(this.submissions())
+    );
+
+    readonly globalStats = computed<GlobalStat>(() =>
+        this.aggregateGlobals(this.submissions())
+    );
+
+    setTab(tab: Tab): void {
+        this.activeTab.set(tab);
+    }
 
     ngOnInit(): void {
         this.loadSubmissions();
@@ -116,6 +146,80 @@ export class DashboardComponent implements OnInit {
     logout(): void {
         this.auth.logout();
         this.router.navigate(['/login']);
+    }
+
+    private groupByMonth(list: PatientFormResponse[]): MonthlyStat[] {
+        const months: MonthlyStat[] = [];
+        const now = new Date();
+
+        // Build the last MONTHS_WINDOW months, oldest first.
+        for (let i = MONTHS_WINDOW - 1; i >= 0; i--) {
+            const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+            const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+            const label = d.toLocaleString('de-DE', { month: 'long', year: 'numeric' });
+            months.push({
+                key,
+                label,
+                count: 0,
+                diagnosed: 0,
+                symptomCounts: this.emptySymptomCounts()
+            });
+        }
+
+        const byKey = new Map(months.map((m) => [m.key, m]));
+
+        for (const s of list) {
+            if (!s.submittedAt) continue;
+            const d = new Date(s.submittedAt);
+            const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+            const m = byKey.get(key);
+            if (!m) continue; // outside the window
+
+            m.count++;
+            if (s.diagnosis && s.diagnosis.trim().length > 0) m.diagnosed++;
+            for (const sym of s.symptoms ?? []) {
+                m.symptomCounts[sym] = (m.symptomCounts[sym] ?? 0) + 1;
+            }
+        }
+
+        return months;
+    }
+
+    private emptySymptomCounts(): Record<Symptom, number> {
+        return {
+            FEVER: 0,
+            COUGH: 0,
+            SHORTNESS_OF_BREATH: 0,
+            HEADACHE: 0,
+            DIZZINESS: 0,
+            NAUSEA: 0,
+            CHEST_PAIN: 0,
+            BACK_PAIN: 0,
+            RASH: 0
+        };
+    }
+
+    private aggregateGlobals(list: PatientFormResponse[]): GlobalStat {
+        return {
+            topAllergies: this.tally<Allergy>(list, (s) => s.allergies),
+            topMedications: this.tally<Medication>(list, (s) => s.medications),
+            topConditions: this.tally<PreExistingCondition>(list, (s) => s.preExistingConditions)
+        };
+    }
+
+    private tally<T extends string>(
+        list: PatientFormResponse[],
+        getter: (s: PatientFormResponse) => readonly T[] | undefined | null
+    ): CountedItem<T>[] {
+        const counts = new Map<T, number>();
+        for (const s of list) {
+            for (const v of getter(s) ?? []) {
+                counts.set(v, (counts.get(v) ?? 0) + 1);
+            }
+        }
+        return [...counts.entries()]
+            .map(([value, count]) => ({ value, count }))
+            .sort((a, b) => b.count - a.count);
     }
 
     private resolveError(err: unknown): string {
