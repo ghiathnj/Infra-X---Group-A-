@@ -2,7 +2,10 @@ package infrax.teama.clinical_service.model;
 
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.CreationTimestamp;
+
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Entity
@@ -54,6 +57,11 @@ public class PatientForm {
     // Admin fields
     private String diagnosis;
     private String notes;
+
+    // Timestamp set automatically by Hibernate on first persist; never updated.
+    @CreationTimestamp
+    @Column(name = "submitted_at", updatable = false)
+    private LocalDateTime submittedAt;
 
     public enum Symptom {
         FEVER, COUGH, SHORTNESS_OF_BREATH, HEADACHE, DIZZINESS, NAUSEA, CHEST_PAIN, BACK_PAIN, RASH
