@@ -1,0 +1,60 @@
+<main class="login-container">
+    <section class="login-card" aria-labelledby="login-title">
+        <header class="login-header">
+            <div class="logo" aria-hidden="true">+</div>
+            <h1 id="login-title">Doctor Admin Login</h1>
+            <p class="subtitle">Sign in to access the patient submissions dashboard.</p>
+        </header>
+
+        <form [formGroup]="form" (ngSubmit)="onSubmit()" novalidate>
+            <div class="field">
+                <label for="username">Username</label>
+                <input
+                    type="text"
+                    id="username"
+                    formControlName="username"
+                    autocomplete="username"
+                    [attr.aria-invalid]="isInvalid('username') ? 'true' : null"
+                    placeholder="e.g. admin"
+                />
+                <small class="field-error">{{ errorFor('username') }}</small>
+            </div>
+
+            <div class="field">
+                <label for="password">Password</label>
+                <input
+                    type="password"
+                    id="password"
+                    formControlName="password"
+                    autocomplete="current-password"
+                    [attr.aria-invalid]="isInvalid('password') ? 'true' : null"
+                    placeholder="Your password"
+                />
+                <small class="field-error">{{ errorFor('password') }}</small>
+            </div>
+
+            @if (errorMessage(); as msg) {
+                <div class="form-error" role="alert" aria-live="polite">{{ msg }}</div>
+            }
+
+            <button
+                type="submit"
+                class="btn-primary"
+                [class.loading]="loading()"
+                [disabled]="loading()"
+            >
+                <span class="btn-label">{{ loading() ? 'Signing in…' : 'Sign in' }}</span>
+                @if (loading()) {
+                    <span class="spinner" aria-hidden="true"></span>
+                }
+            </button>
+        </form>
+
+        <footer class="login-footer">
+            <p>Only authorized doctors may sign in.</p>
+            <p class="back-link">
+                <a routerLink="/">&larr; Back to home</a>
+            </p>
+        </footer>
+    </section>
+</main>

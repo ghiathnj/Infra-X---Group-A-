@@ -1,0 +1,195 @@
+<main class="form-container">
+    <article class="form-card">
+        <header class="form-header">
+            <div class="logo" aria-hidden="true">+</div>
+            <h1>Patient Intake Form</h1>
+            <p class="subtitle">
+                Please fill out the form below so your doctor can review your details before the appointment.
+            </p>
+        </header>
+
+        @if (submittedId(); as id) {
+            <section class="success" role="status" aria-live="polite">
+                <h2>Thank you — your form has been submitted.</h2>
+                <p>Reference number: <strong>#{{ id }}</strong></p>
+                <p class="subtitle">Please mention this number to your doctor if needed.</p>
+                <button type="button" class="btn-secondary" (click)="submitAnother()">Submit another form</button>
+            </section>
+        } @else {
+            <form [formGroup]="form" (ngSubmit)="onSubmit()" novalidate>
+                <!-- Personal info -->
+                <fieldset class="section">
+                    <legend>Personal information</legend>
+
+                    <div class="grid">
+                        <div class="field">
+                            <label for="firstName">First name *</label>
+                            <input id="firstName" type="text" formControlName="firstName"
+                                   [attr.aria-invalid]="isInvalid('firstName') ? 'true' : null"
+                                   placeholder="e.g. MAX" autocomplete="given-name" />
+                            <small class="field-error">{{ errorFor('firstName', 'First name') }}</small>
+                        </div>
+
+                        <div class="field">
+                            <label for="lastName">Last name *</label>
+                            <input id="lastName" type="text" formControlName="lastName"
+                                   [attr.aria-invalid]="isInvalid('lastName') ? 'true' : null"
+                                   placeholder="e.g. MUSTER" autocomplete="family-name" />
+                            <small class="field-error">{{ errorFor('lastName', 'Last name') }}</small>
+                        </div>
+
+                        <div class="field">
+                            <label for="dateOfBirth">Date of birth *</label>
+                            <input id="dateOfBirth" type="date" formControlName="dateOfBirth"
+                                   [attr.aria-invalid]="isInvalid('dateOfBirth') ? 'true' : null" />
+                            <small class="field-error">{{ errorFor('dateOfBirth', 'Date of birth') }}</small>
+                        </div>
+
+                        <div class="field">
+                            <label for="phoneNumber">Phone number *</label>
+                            <input id="phoneNumber" type="tel" formControlName="phoneNumber"
+                                   [attr.aria-invalid]="isInvalid('phoneNumber') ? 'true' : null"
+                                   placeholder="+49 30 1234567" autocomplete="tel" />
+                            <small class="field-error">{{ errorFor('phoneNumber', 'Phone number') }}</small>
+                        </div>
+
+                        <div class="field field-span-2">
+                            <label for="streetName">Street name *</label>
+                            <input id="streetName" type="text" formControlName="streetName"
+                                   [attr.aria-invalid]="isInvalid('streetName') ? 'true' : null"
+                                   placeholder="e.g. HAUPTSTRASSE" autocomplete="address-line1" />
+                            <small class="field-error">{{ errorFor('streetName', 'Street name') }}</small>
+                        </div>
+
+                        <div class="field">
+                            <label for="streetNumber">Street number *</label>
+                            <input id="streetNumber" type="text" formControlName="streetNumber"
+                                   [attr.aria-invalid]="isInvalid('streetNumber') ? 'true' : null"
+                                   placeholder="e.g. 42" inputmode="numeric" />
+                            <small class="field-error">{{ errorFor('streetNumber', 'Street number') }}</small>
+                        </div>
+
+                        <div class="field">
+                            <label for="postalCode">Postal code *</label>
+                            <input id="postalCode" type="text" formControlName="postalCode"
+                                   [attr.aria-invalid]="isInvalid('postalCode') ? 'true' : null"
+                                   placeholder="e.g. 10115" inputmode="numeric" autocomplete="postal-code" />
+                            <small class="field-error">{{ errorFor('postalCode', 'Postal code') }}</small>
+                        </div>
+
+                        <div class="field field-span-2">
+                            <label for="city">City *</label>
+                            <input id="city" type="text" formControlName="city"
+                                   [attr.aria-invalid]="isInvalid('city') ? 'true' : null"
+                                   placeholder="e.g. BERLIN" autocomplete="address-level2" />
+                            <small class="field-error">{{ errorFor('city', 'City') }}</small>
+                        </div>
+
+                        <div class="field field-span-2">
+                            <label for="emailAddress">Email address <span class="muted">(optional)</span></label>
+                            <input id="emailAddress" type="email" formControlName="emailAddress"
+                                   [attr.aria-invalid]="isInvalid('emailAddress') ? 'true' : null"
+                                   placeholder="you@example.com" autocomplete="email" />
+                            <small class="field-error">{{ errorFor('emailAddress', 'Email address') }}</small>
+                        </div>
+                    </div>
+
+                    <p class="hint">
+                        Uppercase letters only for name, street, and city. Street number and postal code must be digits only.
+                    </p>
+                </fieldset>
+
+                <!-- Symptoms -->
+                <fieldset class="section">
+                    <legend>Symptoms <span class="muted">(optional — select any that apply)</span></legend>
+                    <div class="checkbox-grid" formArrayName="symptoms">
+                        @for (opt of symptomOptions; track opt.value; let i = $index) {
+                            <label class="checkbox">
+                                <input type="checkbox" [formControlName]="i" />
+                                <span>{{ opt.label }}</span>
+                            </label>
+                        }
+                    </div>
+                    <div class="field">
+                        <label for="otherSymptoms">Other symptoms</label>
+                        <input id="otherSymptoms" type="text" formControlName="otherSymptoms"
+                               placeholder="e.g. sore throat" />
+                    </div>
+                </fieldset>
+
+                <!-- Allergies -->
+                <fieldset class="section">
+                    <legend>Allergies <span class="muted">(optional)</span></legend>
+                    <div class="checkbox-grid" formArrayName="allergies">
+                        @for (opt of allergyOptions; track opt.value; let i = $index) {
+                            <label class="checkbox">
+                                <input type="checkbox" [formControlName]="i" />
+                                <span>{{ opt.label }}</span>
+                            </label>
+                        }
+                    </div>
+                    <div class="field">
+                        <label for="otherAllergies">Other allergies</label>
+                        <input id="otherAllergies" type="text" formControlName="otherAllergies"
+                               placeholder="e.g. bee stings" />
+                    </div>
+                </fieldset>
+
+                <!-- Medications -->
+                <fieldset class="section">
+                    <legend>Medications <span class="muted">(optional)</span></legend>
+                    <div class="checkbox-grid" formArrayName="medications">
+                        @for (opt of medicationOptions; track opt.value; let i = $index) {
+                            <label class="checkbox">
+                                <input type="checkbox" [formControlName]="i" />
+                                <span>{{ opt.label }}</span>
+                            </label>
+                        }
+                    </div>
+                    <div class="field">
+                        <label for="otherMedications">Other medications</label>
+                        <input id="otherMedications" type="text" formControlName="otherMedications"
+                               placeholder="e.g. vitamin D" />
+                    </div>
+                </fieldset>
+
+                <!-- Pre-existing conditions -->
+                <fieldset class="section">
+                    <legend>Pre-existing conditions <span class="muted">(optional)</span></legend>
+                    <div class="checkbox-grid" formArrayName="preExistingConditions">
+                        @for (opt of conditionOptions; track opt.value; let i = $index) {
+                            <label class="checkbox">
+                                <input type="checkbox" [formControlName]="i" />
+                                <span>{{ opt.label }}</span>
+                            </label>
+                        }
+                    </div>
+                    <div class="field">
+                        <label for="otherPreExistingConditions">Other pre-existing conditions</label>
+                        <input id="otherPreExistingConditions" type="text"
+                               formControlName="otherPreExistingConditions"
+                               placeholder="e.g. migraine" />
+                    </div>
+                </fieldset>
+
+                @if (errorMessage(); as msg) {
+                    <div class="form-error" role="alert" aria-live="polite">{{ msg }}</div>
+                }
+
+                <div class="actions" role="group" aria-label="Form actions">
+                    <a routerLink="/" class="btn-link">&larr; Back to main page</a>
+                    <button type="submit" class="btn-primary"
+                            [class.loading]="submitting()"
+                            [disabled]="submitting()">
+                        <span class="btn-label">
+                            {{ submitting() ? 'Submitting…' : 'Submit form' }}
+                        </span>
+                        @if (submitting()) {
+                            <span class="spinner" aria-hidden="true"></span>
+                        }
+                    </button>
+                </div>
+            </form>
+        }
+    </article>
+</main>

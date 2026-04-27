@@ -1,0 +1,45 @@
+<main class="landing-container">
+    <section class="landing-card" aria-labelledby="landing-title">
+        <header class="landing-header">
+            <div class="logo" aria-hidden="true">+</div>
+            <h1 id="landing-title">Welcome to Infra-X</h1>
+            <p class="subtitle">How can we help you today?</p>
+        </header>
+
+        <div class="choices" role="list">
+            <a routerLink="/patient-form" class="choice" role="listitem" aria-label="Continue as a patient">
+                <div class="choice-icon" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" width="40" height="40" fill="none"
+                         stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+                        <circle cx="12" cy="7" r="4"/>
+                    </svg>
+                </div>
+                <div class="choice-body">
+                    <h2>I am a patient</h2>
+                    <p>Fill out your intake form before your appointment.</p>
+                </div>
+                <span class="choice-arrow" aria-hidden="true">&rarr;</span>
+            </a>
+
+            <a routerLink="/login" class="choice" role="listitem" aria-label="Continue as a doctor">
+                <div class="choice-icon" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" width="40" height="40" fill="none"
+                         stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M12 2L3 7v6c0 5 4 9 9 10 5-1 9-5 9-10V7l-9-5z"/>
+                        <path d="M12 8v4m-2-2h4"/>
+                    </svg>
+                </div>
+                <div class="choice-body">
+                    <h2>I am a doctor</h2>
+                    <p>Sign in to review patient submissions and record a diagnosis.</p>
+                </div>
+                <span class="choice-arrow" aria-hidden="true">&rarr;</span>
+            </a>
+        </div>
+
+        <footer class="landing-footer">
+            <p>This portal is for use by authorized patients and medical staff only.</p>
+        </footer>
+    </section>
+</main>
