@@ -1,0 +1,156 @@
+@if (isEmpty()) {
+    <div class="stats-empty">
+        <p>Once patients start submitting forms, statistics will appear here.</p>
+    </div>
+} @else {
+
+<!-- Card 1 — Symptoms per month (last 6 months) -->
+<section class="stats-card">
+    <header class="stats-header">
+        <h2>Symptoms per month</h2>
+        <p class="subtitle">Last 6 months · sorted by frequency within each month.</p>
+    </header>
+
+    <div class="months-grid">
+        @for (m of monthlyStats(); track m.key) {
+            <article class="month-card">
+                <header class="month-header">
+                    <h3>{{ m.label }}</h3>
+                    <span class="month-total">{{ m.count }} submission{{ m.count === 1 ? '' : 's' }}</span>
+                </header>
+
+                @if (m.count === 0) {
+                    <p class="month-empty">No submissions.</p>
+                } @else {
+                    <ul class="bar-list">
+                        @for (s of sortedSymptoms(m); track s.value) {
+                            <li class="bar-row">
+                                <span class="bar-label">{{ s.label }}</span>
+                                <div class="bar-track" role="img"
+                                     [attr.aria-label]="s.label + ': ' + s.count + ' (max ' + maxSymptomCountIn(m) + ')'">
+                                    <div class="bar-fill bar-symptom"
+                                         [style.width.%]="(s.count / maxSymptomCountIn(m)) * 100"></div>
+                                </div>
+                                <span class="bar-count">{{ s.count }}</span>
+                            </li>
+                        }
+                    </ul>
+                }
+            </article>
+        }
+    </div>
+</section>
+
+<!-- Card 2 — Total submissions per month -->
+<section class="stats-card">
+    <header class="stats-header">
+        <h2>Submissions per month</h2>
+        <p class="subtitle">Total intake form volume over the last 6 months.</p>
+    </header>
+
+    <ul class="bar-list bar-list-wide">
+        @for (m of monthlyStats(); track m.key) {
+            <li class="bar-row">
+                <span class="bar-label">{{ m.label }}</span>
+                <div class="bar-track"
+                     [attr.aria-label]="m.label + ': ' + m.count + ' submissions'">
+                    <div class="bar-fill bar-volume"
+                         [style.width.%]="(m.count / maxMonthlyCount()) * 100"></div>
+                </div>
+                <span class="bar-count">{{ m.count }}</span>
+            </li>
+        }
+    </ul>
+</section>
+
+<!-- Card 3 — Diagnosis rate per month -->
+<section class="stats-card">
+    <header class="stats-header">
+        <h2>Diagnosis rate per month</h2>
+        <p class="subtitle">Green = diagnosed by the doctor · Yellow = still awaiting diagnosis.</p>
+    </header>
+
+    <ul class="bar-list bar-list-wide">
+        @for (m of monthlyStats(); track m.key) {
+            <li class="bar-row">
+                <span class="bar-label">{{ m.label }}</span>
+                @if (m.count === 0) {
+                    <div class="bar-track"></div>
+                    <span class="bar-count muted">—</span>
+                } @else {
+                    <div class="bar-track stacked"
+                         [attr.aria-label]="m.diagnosed + ' of ' + m.count + ' diagnosed'">
+                        <div class="bar-fill bar-diagnosed"
+                             [style.width.%]="diagnosedPercent(m)"></div>
+                        <div class="bar-fill bar-pending"
+                             [style.width.%]="100 - diagnosedPercent(m)"></div>
+                    </div>
+                    <span class="bar-count">
+                        {{ m.diagnosed }} / {{ m.count }}
+                        <span class="muted">({{ diagnosedPercent(m) }} %)</span>
+                    </span>
+                }
+            </li>
+        }
+    </ul>
+</section>
+
+<!-- Card 4 — Top allergies / medications / pre-existing conditions (all-time) -->
+<section class="stats-card">
+    <header class="stats-header">
+        <h2>Most common across all submissions</h2>
+        <p class="subtitle">Aggregated over the entire patient history.</p>
+    </header>
+
+    <div class="globals-grid">
+        <div class="globals-col">
+            <h3>Top allergies</h3>
+            @if (globalStats().topAllergies.length === 0) {
+                <p class="month-empty">None reported.</p>
+            } @else {
+                <ul class="ranked-list">
+                    @for (a of globalStats().topAllergies; track a.value) {
+                        <li>
+                            <span class="rank-label">{{ label(a.value) }}</span>
+                            <span class="rank-count">{{ a.count }}</span>
+                        </li>
+                    }
+                </ul>
+            }
+        </div>
+
+        <div class="globals-col">
+            <h3>Top medications</h3>
+            @if (globalStats().topMedications.length === 0) {
+                <p class="month-empty">None reported.</p>
+            } @else {
+                <ul class="ranked-list">
+                    @for (med of globalStats().topMedications; track med.value) {
+                        <li>
+                            <span class="rank-label">{{ label(med.value) }}</span>
+                            <span class="rank-count">{{ med.count }}</span>
+                        </li>
+                    }
+                </ul>
+            }
+        </div>
+
+        <div class="globals-col">
+            <h3>Top pre-existing conditions</h3>
+            @if (globalStats().topConditions.length === 0) {
+                <p class="month-empty">None reported.</p>
+            } @else {
+                <ul class="ranked-list">
+                    @for (c of globalStats().topConditions; track c.value) {
+                        <li>
+                            <span class="rank-label">{{ label(c.value) }}</span>
+                            <span class="rank-count">{{ c.count }}</span>
+                        </li>
+                    }
+                </ul>
+            }
+        </div>
+    </div>
+</section>
+
+}

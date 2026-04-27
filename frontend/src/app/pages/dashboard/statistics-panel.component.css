@@ -1,0 +1,201 @@
+.stats-empty {
+    background: var(--color-card);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    padding: 40px 24px;
+    text-align: center;
+    color: var(--color-muted);
+}
+
+.stats-card {
+    background: var(--color-card);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    padding: 24px;
+    margin-bottom: 16px;
+}
+
+.stats-card:last-child { margin-bottom: 0; }
+
+.stats-header { margin-bottom: 16px; }
+
+.stats-header h2 {
+    font-size: 18px;
+    margin: 0 0 4px;
+    color: var(--color-text);
+}
+
+.stats-header .subtitle {
+    color: var(--color-muted);
+    font-size: 13px;
+    margin: 0;
+}
+
+/* ---------- Months grid (Card 1) ---------- */
+
+.months-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 14px;
+}
+
+.month-card {
+    background: #f8fafc;
+    border: 1px solid var(--color-border);
+    border-radius: 10px;
+    padding: 14px 16px;
+}
+
+.month-header {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 10px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--color-border);
+}
+
+.month-header h3 {
+    font-size: 14px;
+    margin: 0;
+    color: var(--color-text);
+    text-transform: capitalize;
+}
+
+.month-total {
+    font-size: 12px;
+    color: var(--color-muted);
+    font-variant-numeric: tabular-nums;
+}
+
+.month-empty {
+    margin: 0;
+    font-size: 13px;
+    color: var(--color-muted);
+    font-style: italic;
+}
+
+/* ---------- Bars (shared) ---------- */
+
+.bar-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.bar-list-wide .bar-row { gap: 14px; }
+
+.bar-row {
+    display: grid;
+    grid-template-columns: 140px 1fr 56px;
+    align-items: center;
+    gap: 10px;
+    font-size: 13px;
+}
+
+.bar-list-wide .bar-row {
+    grid-template-columns: 140px 1fr auto;
+}
+
+.bar-label {
+    color: var(--color-text);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.bar-track {
+    height: 12px;
+    background: #e2e8f0;
+    border-radius: 999px;
+    overflow: hidden;
+    position: relative;
+    display: flex;
+}
+
+.bar-track.stacked { background: transparent; }
+
+.bar-fill {
+    height: 100%;
+    transition: width 0.4s ease-out;
+    border-radius: 999px;
+}
+
+/* Adjacent stacked bars share the track's pill shape */
+.bar-track.stacked .bar-fill { border-radius: 0; }
+.bar-track.stacked .bar-fill:first-child { border-radius: 999px 0 0 999px; }
+.bar-track.stacked .bar-fill:last-child  { border-radius: 0 999px 999px 0; }
+.bar-track.stacked .bar-fill:only-child  { border-radius: 999px; }
+
+.bar-symptom { background: var(--color-primary); }
+.bar-volume  { background: linear-gradient(90deg, #3b82f6, #2563eb); }
+.bar-diagnosed { background: #16a34a; }
+.bar-pending   { background: #eab308; }
+
+.bar-count {
+    text-align: right;
+    color: var(--color-text);
+    font-variant-numeric: tabular-nums;
+    font-weight: 600;
+    font-size: 13px;
+}
+
+.bar-count .muted { color: var(--color-muted); font-weight: 400; margin-left: 4px; }
+
+/* ---------- Globals grid (Card 4) ---------- */
+
+.globals-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 16px;
+}
+
+.globals-col h3 {
+    font-size: 13px;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--color-muted);
+    margin: 0 0 10px;
+}
+
+.ranked-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    border: 1px solid var(--color-border);
+    border-radius: 10px;
+    overflow: hidden;
+}
+
+.ranked-list li {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 8px 12px;
+    background: var(--color-card);
+    border-bottom: 1px solid var(--color-border);
+    font-size: 14px;
+}
+
+.ranked-list li:last-child { border-bottom: none; }
+.ranked-list li:nth-child(even) { background: #f8fafc; }
+.ranked-list li:first-child .rank-count { color: var(--color-primary); }
+
+.rank-label { color: var(--color-text); }
+.rank-count {
+    font-variant-numeric: tabular-nums;
+    font-weight: 600;
+    color: var(--color-text);
+}
+
+@media (max-width: 720px) {
+    .stats-card { padding: 16px; }
+    .bar-row { grid-template-columns: 110px 1fr 48px; gap: 8px; font-size: 12px; }
+    .bar-list-wide .bar-row { grid-template-columns: 110px 1fr auto; }
+    .bar-label { font-size: 12px; }
+}
