@@ -6,6 +6,33 @@
             <p class="subtitle">How can we help you today?</p>
         </header>
 
+        <!-- Karlsruhe weather -->
+        <aside class="weather-card" role="complementary" aria-label="Current weather in Karlsruhe">
+            @if (weatherData(); as w) {
+                <div class="weather-icon" aria-hidden="true">{{ w.icon }}</div>
+                <div class="weather-body">
+                    <div class="weather-temp">{{ w.tempC | number: '1.0-1' }}&#8239;°C</div>
+                    <div class="weather-meta">
+                        <span class="weather-place">Karlsruhe</span>
+                        <span class="weather-sep" aria-hidden="true">·</span>
+                        <span class="weather-desc">{{ w.description }}</span>
+                        <span class="weather-sep" aria-hidden="true">·</span>
+                        <span class="weather-wind">Wind {{ w.windKmh | number: '1.0-1' }}&#8239;km/h</span>
+                    </div>
+                </div>
+            } @else if (weatherError()) {
+                <div class="weather-icon" aria-hidden="true">🌐</div>
+                <div class="weather-body">
+                    <div class="weather-meta">Weather service is temporarily unavailable.</div>
+                </div>
+            } @else {
+                <div class="weather-icon weather-loading" aria-hidden="true">·</div>
+                <div class="weather-body">
+                    <div class="weather-meta">Loading weather…</div>
+                </div>
+            }
+        </aside>
+
         <div class="choices" role="list">
             <a routerLink="/patient-form" class="choice" role="listitem" aria-label="Continue as a patient">
                 <div class="choice-icon" aria-hidden="true">
@@ -37,6 +64,17 @@
                 <span class="choice-arrow" aria-hidden="true">&rarr;</span>
             </a>
         </div>
+
+        <!-- Rotating doctor tips -->
+        <aside class="tip-strip" role="status" aria-live="polite" aria-label="Health tip">
+            <div class="tip-header">
+                <span class="tip-badge">Tip {{ tipNumber() }}/{{ totalTips }}</span>
+                <span class="tip-label">Doctor's tip</span>
+            </div>
+            @for (tip of [currentTip()]; track tip) {
+                <p class="tip-body">{{ tip }}</p>
+            }
+        </aside>
 
         <footer class="landing-footer">
             <p>This portal is for use by authorized patients and medical staff only.</p>
