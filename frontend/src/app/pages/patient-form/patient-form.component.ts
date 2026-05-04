@@ -88,17 +88,18 @@ export class PatientFormComponent implements OnInit {
     ];
 
     // Regexes match the backend Bean Validation rules in PatientFormRequest.
-    private readonly upper = /^[A-Z]+$/;
+    //private readonly upper = /^[A-Z]+$/;
+    private readonly namePattern = /^[A-Za-zÄÖÜäöüß]+(?:[ '-][A-Za-zÄÖÜäöüß]+)*$/;
     private readonly numeric = /^\d+$/;
     private readonly phone = /^\+?[0-9\- ]+$/;
 
     readonly form = this.fb.nonNullable.group({
-        firstName: ['', [Validators.required, Validators.pattern(this.upper)]],
-        lastName: ['', [Validators.required, Validators.pattern(this.upper)]],
+        firstName: ['', [Validators.required, Validators.pattern(this.namePattern)]],
+        lastName: ['', [Validators.required, Validators.pattern(this.namePattern)]],
         dateOfBirth: ['', [Validators.required]],
-        streetName: ['', [Validators.required, Validators.pattern(this.upper)]],
+        streetName: ['', [Validators.required, Validators.pattern(this.namePattern)]],
         streetNumber: ['', [Validators.required, Validators.pattern(this.numeric)]],
-        city: ['', [Validators.required, Validators.pattern(this.upper)]],
+        city: ['', [Validators.required, Validators.pattern(this.namePattern)]],
         postalCode: ['', [Validators.required, Validators.pattern(this.numeric)]],
         phoneNumber: ['', [Validators.required, Validators.pattern(this.phone)]],
         emailAddress: ['', [Validators.email]],
@@ -148,7 +149,11 @@ export class PatientFormComponent implements OnInit {
         if (c.errors?.['required']) return `${fieldLabel} is required.`;
         if (c.errors?.['pattern']) {
             const p = c.errors['pattern']?.requiredPattern;
-            if (p?.includes('A-Z')) return `${fieldLabel} must contain only uppercase letters (A–Z).`;
+
+            //if (p?.includes('A-Z')) return `${fieldLabel} must contain only uppercase letters (A–Z).`;
+            if (p?.includes('A-Za-z') || p?.includes('A-Z')) {
+                return `${fieldLabel} must contain only letters, spaces, hyphens, or apostrophes.`;
+            }
             if (p?.includes('\\d') || p?.includes('[0-9')) return `${fieldLabel} must contain only digits.`;
             if (p?.includes('0-9') && p?.includes('+')) return `${fieldLabel} must be a valid phone number.`;
             return `${fieldLabel} has an invalid format.`;
