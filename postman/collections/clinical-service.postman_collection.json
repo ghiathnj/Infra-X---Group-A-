@@ -1,0 +1,475 @@
+{
+  "info": {
+    "_postman_id": "c1111111-1111-1111-1111-111111111111",
+    "name": "Clinical Service — Patient Intake",
+    "description": "End-to-end tests for the clinical-service Patient Intake Form API.\n\n**Run order**:\n1. `Setup / Login` — stores JWT in {{token}}\n2. `Happy Path / Submit form (valid)` — creates a form, stores id in {{formId}}\n3. Any `Validation failures` request — should return 400\n4. `Authenticated reads` — list + get by id\n5. `Admin / Update diagnosis and notes` — PATCHes the form\n\nRequires:\n- clinical-service running on http://localhost:8081\n- auth-service running on http://localhost:8080\n- Environment `Infra-X Local` selected in the top-right of Postman",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Setup",
+      "item": [
+        {
+          "name": "Login (auth-service) — saves token",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "const body = pm.response.json();",
+                  "pm.test('has token', () => pm.expect(body.token).to.be.a('string').and.not.empty);",
+                  "pm.environment.set('token', body.token);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"admin\",\n  \"password\": \"admin\"\n}"
+            },
+            "url": {
+              "raw": "{{authUrl}}/api/auth/login",
+              "host": ["{{authUrl}}"],
+              "path": ["api", "auth", "login"]
+            },
+            "description": "Logs in as the seeded admin user in auth-service and stores the JWT into the `token` environment variable so subsequent requests can use it."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Happy Path",
+      "item": [
+        {
+          "name": "Submit form (valid, full body) — saves formId",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "const body = pm.response.json();",
+                  "pm.test('has id', () => pm.expect(body.id).to.be.a('number'));",
+                  "pm.test('firstName is uppercase', () => pm.expect(body.firstName).to.equal('MAX'));",
+                  "pm.test('symptoms include FEVER', () => pm.expect(body.symptoms).to.include('FEVER'));",
+                  "pm.environment.set('formId', body.id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"firstName\": \"MAX\",\n  \"lastName\": \"MUSTER\",\n  \"dateOfBirth\": \"1990-05-01\",\n  \"streetName\": \"HAUPTSTRASSE\",\n  \"streetNumber\": \"42\",\n  \"city\": \"BERLIN\",\n  \"postalCode\": \"10115\",\n  \"phoneNumber\": \"+49 30 1234567\",\n  \"emailAddress\": \"max@example.com\",\n  \"symptoms\": [\"FEVER\", \"COUGH\", \"HEADACHE\"],\n  \"otherSymptoms\": \"sore throat\",\n  \"allergies\": [\"POLLEN\", \"NUTS\"],\n  \"otherAllergies\": \"bee stings\",\n  \"medications\": [\"IBUPROFEN\"],\n  \"otherMedications\": null,\n  \"preExistingConditions\": [\"ASTHMA\"],\n  \"otherPreExistingConditions\": null\n}"
+            },
+            "url": {
+              "raw": "{{clinicalUrl}}/api/clinical/forms",
+              "host": ["{{clinicalUrl}}"],
+              "path": ["api", "clinical", "forms"]
+            },
+            "description": "Public endpoint. No Authorization header needed. Stores the returned id in {{formId}} for use in later requests."
+          }
+        },
+        {
+          "name": "Submit form (minimal — only required fields)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"firstName\": \"ANNA\",\n  \"lastName\": \"SCHMIDT\",\n  \"dateOfBirth\": \"1985-03-15\",\n  \"streetName\": \"BAHNHOFSTRASSE\",\n  \"streetNumber\": \"7\",\n  \"city\": \"MUENCHEN\",\n  \"postalCode\": \"80331\",\n  \"phoneNumber\": \"+49 89 55512345\"\n}"
+            },
+            "url": {
+              "raw": "{{clinicalUrl}}/api/clinical/forms",
+              "host": ["{{clinicalUrl}}"],
+              "path": ["api", "clinical", "forms"]
+            },
+            "description": "Only the required personal-info fields. email is optional, medical arrays are optional."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Validation failures (should all return 400)",
+      "item": [
+        {
+          "name": "firstName lowercase",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 400', () => pm.response.to.have.status(400));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"firstName\": \"max\",\n  \"lastName\": \"MUSTER\",\n  \"dateOfBirth\": \"1990-05-01\",\n  \"streetName\": \"HAUPTSTRASSE\",\n  \"streetNumber\": \"42\",\n  \"city\": \"BERLIN\",\n  \"postalCode\": \"10115\",\n  \"phoneNumber\": \"+491234\"\n}"
+            },
+            "url": {
+              "raw": "{{clinicalUrl}}/api/clinical/forms",
+              "host": ["{{clinicalUrl}}"],
+              "path": ["api", "clinical", "forms"]
+            }
+          }
+        },
+        {
+          "name": "streetNumber has letter",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 400', () => pm.response.to.have.status(400));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"firstName\": \"MAX\",\n  \"lastName\": \"MUSTER\",\n  \"dateOfBirth\": \"1990-05-01\",\n  \"streetName\": \"HAUPTSTRASSE\",\n  \"streetNumber\": \"42A\",\n  \"city\": \"BERLIN\",\n  \"postalCode\": \"10115\",\n  \"phoneNumber\": \"+491234\"\n}"
+            },
+            "url": {
+              "raw": "{{clinicalUrl}}/api/clinical/forms",
+              "host": ["{{clinicalUrl}}"],
+              "path": ["api", "clinical", "forms"]
+            }
+          }
+        },
+        {
+          "name": "postalCode not numeric",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 400', () => pm.response.to.have.status(400));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"firstName\": \"MAX\",\n  \"lastName\": \"MUSTER\",\n  \"dateOfBirth\": \"1990-05-01\",\n  \"streetName\": \"HAUPTSTRASSE\",\n  \"streetNumber\": \"42\",\n  \"city\": \"BERLIN\",\n  \"postalCode\": \"10-115\",\n  \"phoneNumber\": \"+491234\"\n}"
+            },
+            "url": {
+              "raw": "{{clinicalUrl}}/api/clinical/forms",
+              "host": ["{{clinicalUrl}}"],
+              "path": ["api", "clinical", "forms"]
+            }
+          }
+        },
+        {
+          "name": "emailAddress malformed",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 400', () => pm.response.to.have.status(400));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"firstName\": \"MAX\",\n  \"lastName\": \"MUSTER\",\n  \"dateOfBirth\": \"1990-05-01\",\n  \"streetName\": \"HAUPTSTRASSE\",\n  \"streetNumber\": \"42\",\n  \"city\": \"BERLIN\",\n  \"postalCode\": \"10115\",\n  \"phoneNumber\": \"+491234\",\n  \"emailAddress\": \"not-an-email\"\n}"
+            },
+            "url": {
+              "raw": "{{clinicalUrl}}/api/clinical/forms",
+              "host": ["{{clinicalUrl}}"],
+              "path": ["api", "clinical", "forms"]
+            }
+          }
+        },
+        {
+          "name": "phoneNumber missing",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 400', () => pm.response.to.have.status(400));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"firstName\": \"MAX\",\n  \"lastName\": \"MUSTER\",\n  \"dateOfBirth\": \"1990-05-01\",\n  \"streetName\": \"HAUPTSTRASSE\",\n  \"streetNumber\": \"42\",\n  \"city\": \"BERLIN\",\n  \"postalCode\": \"10115\"\n}"
+            },
+            "url": {
+              "raw": "{{clinicalUrl}}/api/clinical/forms",
+              "host": ["{{clinicalUrl}}"],
+              "path": ["api", "clinical", "forms"]
+            }
+          }
+        },
+        {
+          "name": "dateOfBirth missing",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 400', () => pm.response.to.have.status(400));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"firstName\": \"MAX\",\n  \"lastName\": \"MUSTER\",\n  \"streetName\": \"HAUPTSTRASSE\",\n  \"streetNumber\": \"42\",\n  \"city\": \"BERLIN\",\n  \"postalCode\": \"10115\",\n  \"phoneNumber\": \"+491234\"\n}"
+            },
+            "url": {
+              "raw": "{{clinicalUrl}}/api/clinical/forms",
+              "host": ["{{clinicalUrl}}"],
+              "path": ["api", "clinical", "forms"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Authenticated reads",
+      "item": [
+        {
+          "name": "GET all forms (no token → 403)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('unauthorized without token', () => pm.expect(pm.response.code).to.be.oneOf([401, 403]));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{clinicalUrl}}/api/clinical/forms",
+              "host": ["{{clinicalUrl}}"],
+              "path": ["api", "clinical", "forms"]
+            }
+          }
+        },
+        {
+          "name": "GET all forms (with token)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('is array', () => pm.expect(pm.response.json()).to.be.an('array'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": {
+              "raw": "{{clinicalUrl}}/api/clinical/forms",
+              "host": ["{{clinicalUrl}}"],
+              "path": ["api", "clinical", "forms"]
+            }
+          }
+        },
+        {
+          "name": "GET form by id (with token)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "const body = pm.response.json();",
+                  "pm.test('id matches', () => pm.expect(String(body.id)).to.equal(pm.environment.get('formId')));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": {
+              "raw": "{{clinicalUrl}}/api/clinical/forms/{{formId}}",
+              "host": ["{{clinicalUrl}}"],
+              "path": ["api", "clinical", "forms", "{{formId}}"]
+            }
+          }
+        },
+        {
+          "name": "GET form by id — not found (9999)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 404', () => pm.response.to.have.status(404));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": {
+              "raw": "{{clinicalUrl}}/api/clinical/forms/9999",
+              "host": ["{{clinicalUrl}}"],
+              "path": ["api", "clinical", "forms", "9999"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Admin",
+      "item": [
+        {
+          "name": "PATCH diagnosis and notes",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "const body = pm.response.json();",
+                  "pm.test('diagnosis saved', () => pm.expect(body.diagnosis).to.equal('common cold'));",
+                  "pm.test('notes saved', () => pm.expect(body.notes).to.equal('follow up in 1 week'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"diagnosis\": \"common cold\",\n  \"notes\": \"follow up in 1 week\"\n}"
+            },
+            "url": {
+              "raw": "{{clinicalUrl}}/api/clinical/forms/{{formId}}/admin",
+              "host": ["{{clinicalUrl}}"],
+              "path": ["api", "clinical", "forms", "{{formId}}", "admin"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "CORS preflight",
+      "item": [
+        {
+          "name": "OPTIONS /api/clinical/forms (Origin localhost:3000)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Allow-Origin matches', () => pm.expect(pm.response.headers.get('Access-Control-Allow-Origin')).to.equal('http://localhost:3000'));",
+                  "pm.test('POST allowed', () => pm.expect(pm.response.headers.get('Access-Control-Allow-Methods')).to.include('POST'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "OPTIONS",
+            "header": [
+              { "key": "Origin", "value": "http://localhost:3000" },
+              { "key": "Access-Control-Request-Method", "value": "POST" },
+              { "key": "Access-Control-Request-Headers", "value": "content-type" }
+            ],
+            "url": {
+              "raw": "{{clinicalUrl}}/api/clinical/forms",
+              "host": ["{{clinicalUrl}}"],
+              "path": ["api", "clinical", "forms"]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

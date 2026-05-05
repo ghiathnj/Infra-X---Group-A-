@@ -172,6 +172,33 @@
                     </div>
                 </fieldset>
 
+                <!-- Einwilligung & Unterschrift -->
+                <fieldset class="section consent">
+                    <legend>Einwilligung & Unterschrift</legend>
+
+                    <div class="field">
+                        <label for="signature">Unterschrift *</label>
+                        <app-signature-pad id="signature" formControlName="signature"></app-signature-pad>
+                        <small class="field-error">
+                            @if (isInvalid('signature')) { Bitte unterschreiben Sie das Formular. }
+                        </small>
+                    </div>
+
+                    <label class="consent-row">
+                        <input type="checkbox" formControlName="privacyAccepted" />
+                        <span>
+                            Ich habe die
+                            <button type="button" class="privacy-link" (click)="privacyOpen.set(true)">
+                                Datenschutzerklärung
+                            </button>
+                            gelesen und stimme der Verarbeitung meiner Daten zu. *
+                        </span>
+                    </label>
+                    <small class="field-error">
+                        @if (isInvalid('privacyAccepted')) { Bitte stimmen Sie der Datenschutzerklärung zu. }
+                    </small>
+                </fieldset>
+
                 @if (errorMessage(); as msg) {
                     <div class="form-error" role="alert" aria-live="polite">{{ msg }}</div>
                 }
@@ -180,7 +207,7 @@
                     <a routerLink="/" class="btn-link">&larr; Back to main page</a>
                     <button type="submit" class="btn-primary"
                             [class.loading]="submitting()"
-                            [disabled]="submitting()">
+                            [disabled]="submitting() || form.invalid">
                         <span class="btn-label">
                             {{ submitting() ? 'Submitting…' : 'Submit form' }}
                         </span>
@@ -192,4 +219,11 @@
             </form>
         }
     </article>
+
+    @if (privacyOpen()) {
+        <app-privacy-policy-modal
+            (closed)="privacyOpen.set(false)"
+            (accepted)="onPrivacyAccepted()">
+        </app-privacy-policy-modal>
+    }
 </main>

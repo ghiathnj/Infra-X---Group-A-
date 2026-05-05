@@ -19,6 +19,8 @@ import {
     PreExistingCondition
 } from '../../core/patient-form.service';
 import { AuthService } from '../../core/auth.service';
+import { PrivacyPolicyModalComponent } from './privacy-policy-modal.component';
+import { SignaturePadComponent } from './signature-pad.component';
 
 interface OptionDef<T extends string> {
     value: T;
@@ -28,7 +30,13 @@ interface OptionDef<T extends string> {
 @Component({
     selector: 'app-patient-form',
     standalone: true,
-    imports: [CommonModule, ReactiveFormsModule, RouterLink],
+    imports: [
+        CommonModule,
+        ReactiveFormsModule,
+        RouterLink,
+        PrivacyPolicyModalComponent,
+        SignaturePadComponent
+    ],
     templateUrl: './patient-form.component.html',
     styleUrl: './patient-form.component.css'
 })
@@ -40,6 +48,7 @@ export class PatientFormComponent implements OnInit {
     readonly submitting = signal(false);
     readonly submittedId = signal<number | null>(null);
     readonly errorMessage = signal<string | null>(null);
+    readonly privacyOpen = signal(false);
 
     ngOnInit(): void {
         // Shared-device safety: if a doctor was signed in on this device,
@@ -122,7 +131,10 @@ export class PatientFormComponent implements OnInit {
         preExistingConditions: this.fb.array<FormControl<boolean>>(
             this.conditionOptions.map(() => this.fb.nonNullable.control(false))
         ),
-        otherPreExistingConditions: ['']
+        otherPreExistingConditions: [''],
+
+        signature: ['', [Validators.required]],
+        privacyAccepted: [false, [Validators.requiredTrue]]
     });
 
     get symptomsArray(): FormArray<FormControl<boolean>> {
@@ -185,7 +197,9 @@ export class PatientFormComponent implements OnInit {
             medications: this.pick(v.medications, this.medicationOptions),
             otherMedications: v.otherMedications || null,
             preExistingConditions: this.pick(v.preExistingConditions, this.conditionOptions),
-            otherPreExistingConditions: v.otherPreExistingConditions || null
+            otherPreExistingConditions: v.otherPreExistingConditions || null,
+            signature: v.signature,
+            privacyAccepted: v.privacyAccepted
         };
 
         this.submitting.set(true);
@@ -208,6 +222,12 @@ export class PatientFormComponent implements OnInit {
 
     submitAnother(): void {
         this.submittedId.set(null);
+    }
+
+    onPrivacyAccepted(): void {
+        this.form.controls.privacyAccepted.setValue(true);
+        this.form.controls.privacyAccepted.markAsDirty();
+        this.privacyOpen.set(false);
     }
 
     private pick<T extends string>(flags: boolean[], opts: OptionDef<T>[]): T[] {

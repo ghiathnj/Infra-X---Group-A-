@@ -1,0 +1,88 @@
+<div class="modal-overlay" (click)="onOverlayClick($event)" role="dialog" aria-modal="true" aria-labelledby="privacy-modal-title">
+    <div class="modal-card">
+        <header class="modal-header">
+            <h2 id="privacy-modal-title">Datenschutzerklärung</h2>
+            <button type="button" class="btn-icon" (click)="closed.emit()" aria-label="Schließen">&times;</button>
+        </header>
+
+        <div class="modal-body">
+            <section class="section">
+                <h3>1. Verantwortlicher</h3>
+                <p>
+                    Verantwortlich für die Verarbeitung Ihrer personenbezogenen Daten im Rahmen
+                    dieses Patientenaufnahmeformulars ist die jeweils behandelnde Praxis bzw. Klinik.
+                    Konkrete Kontaktdaten erhalten Sie auf Anfrage am Empfang.
+                </p>
+            </section>
+
+            <section class="section">
+                <h3>2. Zweck der Datenverarbeitung</h3>
+                <p>
+                    Ihre Angaben (Stammdaten, Kontaktdaten, Symptome, Allergien, Medikamente,
+                    Vorerkrankungen sowie Ihre Unterschrift) werden ausschließlich verarbeitet,
+                    um eine medizinische Anamnese durchzuführen, Ihre Behandlung vorzubereiten
+                    und gesetzliche Dokumentationspflichten zu erfüllen.
+                </p>
+            </section>
+
+            <section class="section">
+                <h3>3. Rechtsgrundlage</h3>
+                <p>
+                    Die Verarbeitung erfolgt auf Grundlage Ihrer ausdrücklichen Einwilligung
+                    (Art. 6 Abs. 1 lit. a, Art. 9 Abs. 2 lit. a DSGVO) sowie zur Erfüllung
+                    eines Behandlungsvertrags (Art. 6 Abs. 1 lit. b DSGVO) und zur Erfüllung
+                    rechtlicher Verpflichtungen (Art. 6 Abs. 1 lit. c DSGVO).
+                </p>
+            </section>
+
+            <section class="section">
+                <h3>4. Speicherdauer</h3>
+                <p>
+                    Patientendaten werden gemäß den gesetzlichen Aufbewahrungsfristen
+                    (in der Regel 10 Jahre nach Abschluss der Behandlung gemäß § 630f BGB)
+                    gespeichert und anschließend gelöscht.
+                </p>
+            </section>
+
+            <section class="section">
+                <h3>5. Empfänger</h3>
+                <p>
+                    Ihre Daten werden ausschließlich von befugten Mitarbeitenden der Praxis
+                    bzw. Klinik eingesehen. Eine Weitergabe an Dritte erfolgt nur, wenn dies
+                    für die Behandlung erforderlich ist (z. B. Labor, Fachärzte) oder eine
+                    gesetzliche Verpflichtung besteht.
+                </p>
+            </section>
+
+            <section class="section">
+                <h3>6. Ihre Rechte</h3>
+                <p>
+                    Sie haben jederzeit das Recht auf Auskunft, Berichtigung, Löschung,
+                    Einschränkung der Verarbeitung, Datenübertragbarkeit sowie Widerspruch.
+                    Ihre Einwilligung können Sie jederzeit mit Wirkung für die Zukunft
+                    widerrufen. Es besteht zudem ein Beschwerderecht bei der zuständigen
+                    Datenschutzaufsichtsbehörde.
+                </p>
+            </section>
+
+            <section class="section">
+                <h3>7. Unterschrift</h3>
+                <p>
+                    Mit Ihrer digitalen Unterschrift bestätigen Sie, dass Ihre Angaben
+                    wahrheitsgemäß sind und dass Sie diese Datenschutzerklärung gelesen
+                    sowie verstanden haben. Die Unterschrift wird gemeinsam mit Ihren
+                    Anmeldedaten gespeichert.
+                </p>
+            </section>
+        </div>
+
+        <footer class="modal-footer">
+            <button type="button" class="btn-secondary" (click)="closed.emit()">
+                Abbrechen
+            </button>
+            <button type="button" class="btn-primary" (click)="accepted.emit()">
+                Akzeptieren
+            </button>
+        </footer>
+    </div>
+</div>

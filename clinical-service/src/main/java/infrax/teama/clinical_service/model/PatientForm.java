@@ -54,6 +54,13 @@ public class PatientForm {
     private List<PreExistingCondition> preExistingConditions;
     private String otherPreExistingConditions;
 
+    // Consent & signature (captured at submission)
+    private Boolean privacyAccepted;
+
+    @Lob
+    @Column(columnDefinition = "LONGTEXT")
+    private String signature;
+
     // Admin fields
     private String diagnosis;
     private String notes;

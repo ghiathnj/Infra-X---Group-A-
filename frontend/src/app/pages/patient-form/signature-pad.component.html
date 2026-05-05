@@ -1,0 +1,14 @@
+<div class="signature-pad">
+    <canvas #canvas
+            width="1200"
+            height="360"
+            (pointerdown)="onPointerDown($event)"
+            (pointermove)="onPointerMove($event)"
+            (pointerup)="onPointerUp($event)"
+            (pointercancel)="onPointerUp($event)"
+            aria-label="Unterschriftsfeld"></canvas>
+    <div class="signature-actions">
+        <span class="signature-hint">Mit der Maus, dem Finger oder einem Stift unterschreiben.</span>
+        <button type="button" class="btn-clear" (click)="clear()">Löschen</button>
+    </div>
+</div>
