@@ -43,4 +43,10 @@ public class PatientFormRequest {
     private String otherMedications;
     private List<PatientForm.PreExistingCondition> preExistingConditions;
     private String otherPreExistingConditions;
+
+    @AssertTrue(message = "Privacy declaration must be accepted")
+    private Boolean privacyAccepted;
+
+    @NotBlank(message = "Signature is required")
+    private String signature;
 }

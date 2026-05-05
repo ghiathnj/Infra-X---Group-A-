@@ -1,0 +1,49 @@
+.signature-pad {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+canvas {
+    display: block;
+    width: 100%;
+    aspect-ratio: 1200 / 360;
+    background: #fff;
+    border: 1px solid var(--color-border);
+    border-radius: 8px;
+    touch-action: none;
+    cursor: crosshair;
+    transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+canvas:focus {
+    outline: none;
+    border-color: var(--color-primary);
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
+}
+
+.signature-actions {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.signature-hint {
+    font-size: 12px;
+    color: var(--color-muted);
+}
+
+.btn-clear {
+    padding: 6px 14px;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--color-text);
+    background: #f1f5f9;
+    border: 1px solid var(--color-border);
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background 0.12s;
+}
+
+.btn-clear:hover { background: #e2e8f0; }

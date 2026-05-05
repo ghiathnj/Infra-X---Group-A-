@@ -36,6 +36,8 @@ public class PatientFormService {
                 .otherMedications(request.getOtherMedications())
                 .preExistingConditions(request.getPreExistingConditions())
                 .otherPreExistingConditions(request.getOtherPreExistingConditions())
+                .privacyAccepted(request.getPrivacyAccepted())
+                .signature(request.getSignature())
                 .build();
         return repository.save(form);
     }

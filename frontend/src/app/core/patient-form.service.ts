@@ -35,6 +35,8 @@ export interface PatientFormRequest {
     otherMedications?: string | null;
     preExistingConditions?: PreExistingCondition[];
     otherPreExistingConditions?: string | null;
+    signature: string;
+    privacyAccepted: boolean;
 }
 
 export interface PatientFormResponse extends PatientFormRequest {
