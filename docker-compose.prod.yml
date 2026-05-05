@@ -1,0 +1,99 @@
+# Production compose file used by the deploy stage of .gitlab-ci.yml.
+# Pulls pre-built images from GitLab's container registry instead of
+# rebuilding from source on the deploy host.
+#
+# Required environment variables (read from a `.env` file co-located with
+# this compose file on the server, see docs/CI-CD-SETUP.md):
+#
+#   REGISTRY_IMAGE   — e.g. registry.gitlab.com/infra-x-group/team-a
+#   IMAGE_TAG        — image tag to deploy. Defaults to `latest` if unset.
+#                      The deploy stage exports it explicitly per-commit
+#                      so rollback is trivial: just override on the host.
+#   DB_PASSWORD      — MariaDB root password used by both DB instances.
+#   JWT_SECRET       — Base64 HMAC secret shared by both backend services.
+
+services:
+  mariadb-auth:
+    image: mariadb:11
+    restart: unless-stopped
+    environment:
+      MARIADB_ROOT_PASSWORD: ${DB_PASSWORD}
+      MARIADB_DATABASE: auth_db
+    volumes:
+      - mariadb_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  mariadb-clinic:
+    image: mariadb:11
+    restart: unless-stopped
+    container_name: clinic-mariadb
+    environment:
+      MARIADB_ROOT_PASSWORD: ${DB_PASSWORD}
+      MARIADB_DATABASE: clinicdb
+      MARIADB_INITDB_SKIP_TZINFO: 1
+    volumes:
+      - mariadb_clinic_data:/var/lib/mysql
+      - ./init-databases.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    networks:
+      - clinic-network
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  auth-service:
+    image: ${REGISTRY_IMAGE}/auth-service:${IMAGE_TAG:-latest}
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    environment:
+      DB_URL: jdbc:mariadb://mariadb-auth:3306/auth_db
+      DB_USERNAME: root
+      DB_PASSWORD: ${DB_PASSWORD}
+      JWT_SECRET: ${JWT_SECRET}
+    depends_on:
+      mariadb-auth:
+        condition: service_healthy
+
+  clinical-service:
+    image: ${REGISTRY_IMAGE}/clinical-service:${IMAGE_TAG:-latest}
+    restart: unless-stopped
+    container_name: clinic-clinical-service
+    ports:
+      - "8081:8081"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:mariadb://mariadb-clinic:3306/clinicdb
+      SPRING_DATASOURCE_USERNAME: root
+      SPRING_DATASOURCE_PASSWORD: ${DB_PASSWORD}
+      SPRING_DATASOURCE_DRIVER_CLASS_NAME: org.mariadb.jdbc.Driver
+      SPRING_JPA_HIBERNATE_DDL_AUTO: update
+      SPRING_JPA_PROPERTIES_HIBERNATE_DIALECT: org.hibernate.dialect.MariaDBDialect
+      JWT_SECRET: ${JWT_SECRET}
+    depends_on:
+      mariadb-clinic:
+        condition: service_healthy
+    networks:
+      - clinic-network
+      - default
+
+  frontend:
+    image: ${REGISTRY_IMAGE}/frontend:${IMAGE_TAG:-latest}
+    restart: unless-stopped
+    ports:
+      - "3000:80"
+    depends_on:
+      - auth-service
+      - clinical-service
+
+networks:
+  clinic-network:
+    driver: bridge
+
+volumes:
+  mariadb_data:
+  mariadb_clinic_data:
