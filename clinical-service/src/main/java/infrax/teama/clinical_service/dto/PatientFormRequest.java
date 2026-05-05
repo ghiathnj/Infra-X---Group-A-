@@ -9,21 +9,21 @@ import java.util.List;
 @Data
 public class PatientFormRequest {
     @NotBlank
-    @Pattern(regexp = "[A-Z]+", message = "First name must be uppercase letters only")
+    @Pattern(regexp = "[A-Za-zÄÖÜäöüß]+(?:[ '-][A-Za-zÄÖÜäöüß]+)*", message = "First name contains invalid characters")
     private String firstName;
     @NotBlank
-    @Pattern(regexp = "[A-Z]+", message = "Last name must be uppercase letters only")
+    @Pattern(regexp = "[A-Za-zÄÖÜäöüß]+(?:[ '-][A-Za-zÄÖÜäöüß]+)*", message = "Last name contains invalid characters")
     private String lastName;
     @NotNull
     private LocalDate dateOfBirth;
     @NotBlank
-    @Pattern(regexp = "[A-Z]+", message = "Street name must be uppercase letters only")
+    @Pattern(regexp = "[A-Za-zÄÖÜäöüß]+(?:[ '-][A-Za-zÄÖÜäöüß]+)*", message = "Street name contains invalid characters")
     private String streetName;
     @NotBlank
     @Pattern(regexp = "\\d+", message = "Street number must be numeric")
     private String streetNumber;
     @NotBlank
-    @Pattern(regexp = "[A-Z]+", message = "City must be uppercase letters only")
+    @Pattern(regexp = "[A-Za-zÄÖÜäöüß]+(?:[ '-][A-Za-zÄÖÜäöüß]+)*", message = "City contains invalid characters")
     private String city;
     @NotBlank
     @Pattern(regexp = "\\d+", message = "Postal code must be numeric")
