@@ -1,0 +1,149 @@
+# GitLab CI/CD pipeline for the Infra-X team-a project.
+#
+# Stages:
+#   1. test    — unit-test both Spring Boot services + verify the Angular build.
+#   2. build   — build Docker images for auth-service, clinical-service, frontend
+#                and push them to GitLab's container registry. Only on `main`.
+#   3. deploy  — SSH to the production server, pull the new images, restart the
+#                stack via docker-compose.prod.yml. Only on `main`, after build.
+#
+# All registry credentials (CI_REGISTRY_*, CI_REGISTRY_IMAGE) are provided
+# automatically by GitLab. The deploy stage requires three CI/CD variables to
+# be configured manually under Settings → CI/CD → Variables:
+#   SSH_PRIVATE_KEY   — type: File, masked, protected.
+#                       Private half of the SSH key whose public half is in
+#                       team-a@87.106.50.149's authorized_keys.
+#   SSH_KNOWN_HOSTS   — type: Variable, NOT masked.
+#                       Output of `ssh-keyscan 87.106.50.149` so the runner
+#                       does not prompt for host-key acceptance.
+#   DEPLOY_HOST       — type: Variable, NOT masked. Default: team-a@87.106.50.149
+#
+# See docs/CI-CD-SETUP.md for one-time server setup.
+
+stages:
+  - test
+  - build
+  - deploy
+
+variables:
+  MAVEN_OPTS: "-Dmaven.repo.local=$CI_PROJECT_DIR/.m2/repository"
+  DEPLOY_HOST: "team-a@87.106.50.149"
+  DEPLOY_PATH: "~/team-a"
+
+# Cache Maven and npm dependencies between pipeline runs to keep CI minutes low.
+cache:
+  key: $CI_COMMIT_REF_SLUG
+  paths:
+    - .m2/repository
+    - frontend/node_modules
+
+# ────────────────────────────────────────────────────────────────────────────
+# Stage 1 — Tests (every push, every MR)
+# ────────────────────────────────────────────────────────────────────────────
+
+test:auth-service:
+  stage: test
+  image: maven:3-eclipse-temurin-17
+  script:
+    - cd auth-service
+    - mvn -B -Dtest='JwtServiceTest,CustomUserDetailsServiceTest,AuthControllerTest' test
+  artifacts:
+    when: always
+    reports:
+      junit: auth-service/target/surefire-reports/TEST-*.xml
+
+test:clinical-service:
+  stage: test
+  image: maven:3-eclipse-temurin-17
+  script:
+    - cd clinical-service
+    - mvn -B -Dtest='JwtProviderTest,PatientFormServiceTest,PatientFormControllerTest' test
+  artifacts:
+    when: always
+    reports:
+      junit: clinical-service/target/surefire-reports/TEST-*.xml
+
+test:frontend-build:
+  stage: test
+  image: node:20-alpine
+  script:
+    - cd frontend
+    - npm install --no-audit --no-fund
+    - npx ng build --configuration production
+
+# ────────────────────────────────────────────────────────────────────────────
+# Stage 2 — Build & push Docker images (only on main)
+# ────────────────────────────────────────────────────────────────────────────
+
+.docker-build:
+  stage: build
+  image: docker:25
+  services:
+    - docker:25-dind
+  before_script:
+    - echo "$CI_REGISTRY_PASSWORD" | docker login -u "$CI_REGISTRY_USER" --password-stdin "$CI_REGISTRY"
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "main"'
+
+build:auth-image:
+  extends: .docker-build
+  script:
+    - docker build -t "$CI_REGISTRY_IMAGE/auth-service:$CI_COMMIT_SHORT_SHA" -t "$CI_REGISTRY_IMAGE/auth-service:latest" auth-service/
+    - docker push "$CI_REGISTRY_IMAGE/auth-service:$CI_COMMIT_SHORT_SHA"
+    - docker push "$CI_REGISTRY_IMAGE/auth-service:latest"
+
+build:clinical-image:
+  extends: .docker-build
+  script:
+    - docker build -t "$CI_REGISTRY_IMAGE/clinical-service:$CI_COMMIT_SHORT_SHA" -t "$CI_REGISTRY_IMAGE/clinical-service:latest" clinical-service/
+    - docker push "$CI_REGISTRY_IMAGE/clinical-service:$CI_COMMIT_SHORT_SHA"
+    - docker push "$CI_REGISTRY_IMAGE/clinical-service:latest"
+
+build:frontend-image:
+  extends: .docker-build
+  script:
+    - docker build -t "$CI_REGISTRY_IMAGE/frontend:$CI_COMMIT_SHORT_SHA" -t "$CI_REGISTRY_IMAGE/frontend:latest" frontend/
+    - docker push "$CI_REGISTRY_IMAGE/frontend:$CI_COMMIT_SHORT_SHA"
+    - docker push "$CI_REGISTRY_IMAGE/frontend:latest"
+
+# ────────────────────────────────────────────────────────────────────────────
+# Stage 3 — Deploy via SSH (only on main, after all build jobs succeed)
+# ────────────────────────────────────────────────────────────────────────────
+
+deploy:
+  stage: deploy
+  image: alpine:3.19
+  needs:
+    - build:auth-image
+    - build:clinical-image
+    - build:frontend-image
+  before_script:
+    - apk add --no-cache openssh-client rsync
+    - eval $(ssh-agent -s)
+    - chmod 600 "$SSH_PRIVATE_KEY"
+    - ssh-add "$SSH_PRIVATE_KEY"
+    - mkdir -p ~/.ssh && chmod 700 ~/.ssh
+    - echo "$SSH_KNOWN_HOSTS" > ~/.ssh/known_hosts && chmod 644 ~/.ssh/known_hosts
+  script:
+    # Ship only the files the server needs — the prod compose file, DB init
+    # script, and the edge nginx config. No source code, no .env, no
+    # init-letsencrypt.sh (placed manually during one-time setup; see
+    # docs/CI-CD-SETUP.md). The certbot/ directory on the server holds
+    # the actual Let's Encrypt cert files and is left alone by deploys.
+    - rsync -avz docker-compose.prod.yml init-databases.sql "$DEPLOY_HOST:$DEPLOY_PATH/"
+    - rsync -avz nginx/ "$DEPLOY_HOST:$DEPLOY_PATH/nginx/"
+    # Pull-and-restart in one SSH session. The server is already logged into
+    # the GitLab registry via a deploy token (one-time setup).
+    - |
+      ssh "$DEPLOY_HOST" "
+        cd $DEPLOY_PATH &&
+        export IMAGE_TAG=$CI_COMMIT_SHORT_SHA &&
+        docker compose -f docker-compose.prod.yml pull &&
+        docker compose -f docker-compose.prod.yml up -d --remove-orphans &&
+        docker image prune -f
+      "
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "main"'
+  environment:
+    name: production
+    url: https://dev.praxis-form.de

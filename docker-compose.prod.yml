@@ -1,0 +1,134 @@
+# Production compose file used by the deploy stage of .gitlab-ci.yml.
+# Pulls pre-built images from GitLab's container registry instead of
+# rebuilding from source on the deploy host.
+#
+# Public surface: only the edge nginx (ports 80 + 443). nginx terminates
+# TLS using Let's Encrypt certificates obtained via certbot, then reverse-
+# proxies to the internal containers. Backends and the SPA-serving nginx
+# inside the frontend container are NOT exposed to the internet.
+#
+# Required environment variables (read from a `.env` file co-located with
+# this compose file on the server, see docs/CI-CD-SETUP.md):
+#
+#   REGISTRY_IMAGE   — e.g. registry.gitlab.com/infra-x-group/team-a
+#   IMAGE_TAG        — image tag to deploy. Defaults to `latest` if unset.
+#                      The deploy stage exports it explicitly per-commit
+#                      so rollback is trivial: just override on the host.
+#   DB_PASSWORD      — MariaDB root password used by both DB instances.
+#   JWT_SECRET       — Base64 HMAC secret shared by both backend services.
+#
+# First-time setup: see nginx/init-letsencrypt.sh — must be run ONCE on
+# the server to obtain the initial certificate.
+
+services:
+  # Edge reverse-proxy and TLS terminator.
+  nginx:
+    image: nginx:1.27-alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./certbot/conf:/etc/letsencrypt
+      - ./certbot/www:/var/www/certbot
+    # Reload nginx every 6h so renewed certs (issued by the certbot sidecar)
+    # are picked up without manual intervention.
+    command: '/bin/sh -c ''while :; do sleep 6h & wait $${!}; nginx -s reload; done & nginx -g "daemon off;"'''
+    depends_on:
+      - frontend
+      - auth-service
+      - clinical-service
+    networks:
+      - clinic-network
+      - default
+
+  # Cert issuer and renewer. Sleeps in a loop calling `certbot renew`
+  # every 12 hours; the actual cert files are shared with nginx via the
+  # ./certbot/conf bind mount.
+  certbot:
+    image: certbot/certbot
+    restart: unless-stopped
+    volumes:
+      - ./certbot/conf:/etc/letsencrypt
+      - ./certbot/www:/var/www/certbot
+    entrypoint: '/bin/sh -c ''trap exit TERM; while :; do certbot renew; sleep 12h & wait $${!}; done;'''
+
+  mariadb-auth:
+    image: mariadb:11
+    restart: unless-stopped
+    environment:
+      MARIADB_ROOT_PASSWORD: ${DB_PASSWORD}
+      MARIADB_DATABASE: auth_db
+    volumes:
+      - mariadb_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  mariadb-clinic:
+    image: mariadb:11
+    restart: unless-stopped
+    container_name: clinic-mariadb
+    environment:
+      MARIADB_ROOT_PASSWORD: ${DB_PASSWORD}
+      MARIADB_DATABASE: clinicdb
+      MARIADB_INITDB_SKIP_TZINFO: 1
+    volumes:
+      - mariadb_clinic_data:/var/lib/mysql
+      - ./init-databases.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    networks:
+      - clinic-network
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  auth-service:
+    image: ${REGISTRY_IMAGE}/auth-service:${IMAGE_TAG:-latest}
+    restart: unless-stopped
+    environment:
+      DB_URL: jdbc:mariadb://mariadb-auth:3306/auth_db
+      DB_USERNAME: root
+      DB_PASSWORD: ${DB_PASSWORD}
+      JWT_SECRET: ${JWT_SECRET}
+    depends_on:
+      mariadb-auth:
+        condition: service_healthy
+
+  clinical-service:
+    image: ${REGISTRY_IMAGE}/clinical-service:${IMAGE_TAG:-latest}
+    restart: unless-stopped
+    container_name: clinic-clinical-service
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:mariadb://mariadb-clinic:3306/clinicdb
+      SPRING_DATASOURCE_USERNAME: root
+      SPRING_DATASOURCE_PASSWORD: ${DB_PASSWORD}
+      SPRING_DATASOURCE_DRIVER_CLASS_NAME: org.mariadb.jdbc.Driver
+      SPRING_JPA_HIBERNATE_DDL_AUTO: update
+      SPRING_JPA_PROPERTIES_HIBERNATE_DIALECT: org.hibernate.dialect.MariaDBDialect
+      JWT_SECRET: ${JWT_SECRET}
+    depends_on:
+      mariadb-clinic:
+        condition: service_healthy
+    networks:
+      - clinic-network
+      - default
+
+  frontend:
+    image: ${REGISTRY_IMAGE}/frontend:${IMAGE_TAG:-latest}
+    restart: unless-stopped
+    depends_on:
+      - auth-service
+      - clinical-service
+
+networks:
+  clinic-network:
+    driver: bridge
+
+volumes:
+  mariadb_data:
+  mariadb_clinic_data:
