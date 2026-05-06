@@ -125,10 +125,13 @@ deploy:
     - mkdir -p ~/.ssh && chmod 700 ~/.ssh
     - echo "$SSH_KNOWN_HOSTS" > ~/.ssh/known_hosts && chmod 644 ~/.ssh/known_hosts
   script:
-    # Ship only the files the server needs — the prod compose file and the
-    # init script for the clinic database. No source code, no .env (the .env
-    # is created on the server during one-time setup; see docs/CI-CD-SETUP.md).
+    # Ship only the files the server needs — the prod compose file, DB init
+    # script, and the edge nginx config. No source code, no .env, no
+    # init-letsencrypt.sh (placed manually during one-time setup; see
+    # docs/CI-CD-SETUP.md). The certbot/ directory on the server holds
+    # the actual Let's Encrypt cert files and is left alone by deploys.
     - rsync -avz docker-compose.prod.yml init-databases.sql "$DEPLOY_HOST:$DEPLOY_PATH/"
+    - rsync -avz nginx/ "$DEPLOY_HOST:$DEPLOY_PATH/nginx/"
     # Pull-and-restart in one SSH session. The server is already logged into
     # the GitLab registry via a deploy token (one-time setup).
     - |
@@ -143,4 +146,4 @@ deploy:
     - if: '$CI_COMMIT_BRANCH == "main"'
   environment:
     name: production
-    url: http://87.106.50.149:3000
+    url: https://dev.praxis-form.de

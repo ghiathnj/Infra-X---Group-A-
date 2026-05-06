@@ -78,13 +78,64 @@ a learning deploy, but rotate it before any real use.
 
 ### 1.5 Open firewall ports
 
-The frontend listens on port 3000, auth on 8080, clinical on 8081. Open them:
+The edge nginx is the only public-facing service. It needs port **80**
+(HTTP, used by Let's Encrypt for the ACME HTTP-01 challenge and to redirect
+to HTTPS) and port **443** (HTTPS). Backends and the SPA-serving nginx are
+not exposed to the internet — the edge nginx reverse-proxies to them on
+the internal docker network.
+
+In the **IONOS Cloud Panel** (or whatever firewall layer your provider
+uses), allow inbound TCP 80 and 443 from `0.0.0.0/0`. SSH (22) of course
+stays open for the deploy.
+
+If you also use ufw on the server itself, mirror the rules:
 
 ```bash
-sudo ufw allow 3000/tcp comment 'team-a frontend'
-sudo ufw allow 8080/tcp comment 'team-a auth-service'
-sudo ufw allow 8081/tcp comment 'team-a clinical-service'
+sudo ufw allow 22/tcp   comment 'SSH'
+sudo ufw allow 80/tcp   comment 'nginx http (acme + redirect)'
+sudo ufw allow 443/tcp  comment 'nginx https'
 ```
+
+Ports 3000, 8080, 8081 are no longer published outside docker — no rule
+needed for them anymore.
+
+### 1.6 Bootstrap the Let's Encrypt certificate (run ONCE)
+
+`docker-compose.prod.yml` mounts a real Let's Encrypt cert into the nginx
+container. On a fresh server that file does not exist yet, so nginx
+refuses to start, so certbot can't run, so the cert is never issued —
+chicken and egg. The bootstrap script `nginx/init-letsencrypt.sh` solves
+this by placing a self-signed dummy cert first, starting nginx with the
+dummy, then having certbot fetch the real cert and reloading nginx.
+
+```bash
+# On the server, in ~/team-a, AFTER docker-compose.prod.yml and the
+# nginx/ folder are present (you can copy them once via scp from your
+# local clone, or trigger the GitLab pipeline once — even if its deploy
+# step fails because there's no cert yet, the rsync part will succeed
+# and place the files for you).
+
+cd ~/team-a
+chmod +x nginx/init-letsencrypt.sh
+./nginx/init-letsencrypt.sh
+```
+
+The script downloads recommended TLS parameters, creates a 1-day
+self-signed dummy cert, brings up nginx with it, requests the real
+cert from Let's Encrypt, and reloads nginx. You should see five
+log lines numbered `[1/5]` through `[5/5]` and a final `✓ Done`.
+
+If the cert request fails because of rate limits or other transient
+errors, edit `nginx/init-letsencrypt.sh` and set `STAGING=1` to
+exercise the flow against the Let's Encrypt staging endpoint (untrusted
+certs but no rate limits), confirm everything works end-to-end, then
+flip back to `STAGING=0` and run again.
+
+After this script has run successfully **once**, the certbot sidecar
+in the compose file will automatically renew the cert before it
+expires (every 12 hours it calls `certbot renew`, which is a no-op
+unless the cert is within 30 days of expiry). The nginx container
+reloads itself every 6 hours to pick up renewed cert files.
 
 ---
 
@@ -159,41 +210,24 @@ deploy                ✓ ~30s
 
 Then visit:
 
-- http://87.106.50.149:3000  — frontend
-- http://87.106.50.149:8080/api/auth/login  — auth API
-- http://87.106.50.149:8081/api/clinical/forms  — clinical API
+- https://dev.praxis-form.de               — frontend (TLS via Let's Encrypt)
+- https://dev.praxis-form.de/api/auth/login    — auth API
+- https://dev.praxis-form.de/api/clinical/forms — clinical API
 
 If `deploy` fails with `Permission denied (publickey)`, re-check step 2.3.
 If it succeeds but the containers won't start, SSH in and run
 `docker compose -f docker-compose.prod.yml logs -f` to inspect.
 
----
+If the browser shows a TLS warning, the bootstrap (1.6) was probably
+skipped or failed — check `docker compose logs nginx` for cert path
+errors and re-run `./nginx/init-letsencrypt.sh`.
 
-## 4. Known follow-ups (out of scope for this MR)
+To watch certbot's renewal loop (it should print "Cert not yet due for
+renewal" every 12 hours after the bootstrap):
 
-The pipeline gets the **services running on the server**. Two things still
-need a small follow-up MR before the SPA fully works against the deployed
-backends from a remote browser:
-
-1. **Frontend env URLs.** [`frontend/src/environments/environment.prod.ts`](../frontend/src/environments/environment.prod.ts)
-   currently hardcodes `http://localhost:8080` and `:8081`. From a browser
-   pointing at `87.106.50.149:3000`, those URLs resolve to the user's own
-   machine, not the server. Either:
-   - replace with `http://87.106.50.149:8080` / `:8081`, or
-   - set `apiBaseUrl: ''` and add reverse-proxy rules to
-     [`frontend/nginx.conf`](../frontend/nginx.conf) so `/api/auth/*` and
-     `/api/clinical/*` proxy to the backends inside the docker network.
-
-2. **CORS allowed origins.** Both `SecurityConfig` classes
-   ([auth](../auth-service/src/main/java/infrax/teama/auth_service/config/SecurityConfig.java),
-   [clinical](../clinical-service/src/main/java/infrax/teama/clinical_service/security/SecurityConfig.java))
-   only allow `http://localhost:3000` and `:8081`. Add
-   `http://87.106.50.149:3000` to both lists, or read the allowed origins
-   from an environment variable.
-
-The simpler-and-cleaner fix is option 1's reverse-proxy approach: the SPA
-calls relative URLs, nginx proxies them inside the docker network, and CORS
-becomes a non-issue because everything is same-origin.
+```bash
+docker compose -f docker-compose.prod.yml logs -f certbot
+```
 
 ---
 
