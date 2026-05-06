@@ -134,11 +134,19 @@ deploy:
     - rsync -avz nginx/ "$DEPLOY_HOST:$DEPLOY_PATH/nginx/"
     # Pull-and-restart in one SSH session. The server is already logged into
     # the GitLab registry via a deploy token (one-time setup).
+    #
+    # The nginx container is force-recreated separately because compose only
+    # detects changes to the YAML config — not to the bind-mounted nginx.conf.
+    # Without --force-recreate, an updated nginx.conf would sit on disk while
+    # the running container kept the old inode mapped (rsync replaces files
+    # rather than editing in place). All other services rebuild only when
+    # their image tag changes, courtesy of `docker compose pull`.
     - |
       ssh "$DEPLOY_HOST" "
         cd $DEPLOY_PATH &&
         export IMAGE_TAG=$CI_COMMIT_SHORT_SHA &&
         docker compose -f docker-compose.prod.yml pull &&
+        docker compose -f docker-compose.prod.yml up -d --no-deps --force-recreate nginx &&
         docker compose -f docker-compose.prod.yml up -d --remove-orphans &&
         docker image prune -f
       "
